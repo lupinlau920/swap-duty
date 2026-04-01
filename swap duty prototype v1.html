@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>醫院調更管理系統 - Prototype 1 Final</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f1f5f9;
+        }
+        .tab-active {
+            border-bottom: 4px solid #2563eb;
+            color: #2563eb;
+            font-weight: 900;
+        }
+        #confirmModal, #alertModal, #passwordModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        /* 隱藏原生日期輸入框，僅用於觸發日曆 */
+        .hidden-date-picker {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- 導航欄 -->
+    <nav class="bg-white shadow-md border-b sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-black text-gray-800 tracking-tight">調更系統 <span class="text-blue-600">P1</span></span>
+                </div>
+                <div class="flex gap-2 h-full">
+                    <button onclick="switchTab('apply')" id="tabApply" class="px-6 flex items-center tab-active transition-all duration-200">提交申請</button>
+                    <button onclick="requestAdminAccess()" id="tabAdmin" class="px-6 flex items-center text-gray-500 hover:text-blue-600 transition-all duration-200 relative">
+                        主管批核 
+                        <span id="pendingBadge" class="absolute top-3 right-2 hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full border-2 border-white font-bold animate-bounce">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- 1) 申請頁面 -->
+        <section id="sectionApply" class="block">
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-white rounded-3xl shadow-sm border p-8">
+                    <div class="flex items-center gap-2 mb-8">
+                        <span class="w-2 h-8 bg-blue-600 rounded-full"></span>
+                        <h2 class="text-2xl font-black text-gray-800">建立新調更申請</h2>
+                    </div>
+                    
+                    <form id="swapForm" class="space-y-8">
+                        <!-- 申請人區塊 -->
+                        <div class="p-6 bg-blue-50/50 rounded-2xl space-y-5 border border-blue-100 relative">
+                            <div class="absolute -top-3 left-6 bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest shadow-sm">本人 / 申請人</div>
+                            <input type="text" id="reqName" required class="w-full px-5 py-4 border border-blue-200 rounded-xl text-base outline-none focus:ring-4 focus:ring-blue-100 transition-all shadow-sm" placeholder="您的姓名">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-gray-400 ml-1">職位</label>
+                                    <select id="reqPos" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
+                                        <option value="" disabled selected>請選擇</option>
+                                        <option value="APN">APN</option>
+                                        <option value="RN">RN</option>
+                                        <option value="EA">EA</option>
+                                        <option value="PCA">PCA</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-gray-400 ml-1">原本更位</label>
+                                    <select id="reqShift" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-blue-600 outline-none">
+                                        <option value="A">A (早更)</option>
+                                        <option value="P">P (午更)</option>
+                                        <option value="N">N (夜更)</option>
+                                        <option value="D">D (全日)</option>
+                                        <option value="1-9">1-9</option>
+                                        <option value="11-7">11-7</option>
+                                        <option value="VL">VL (年假)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-[10px] font-black text-blue-400 uppercase ml-1 tracking-wider">原本日期區間 (日/月/年)</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="relative">
+                                        <input type="text" id="reqDateStart" required maxlength="10" placeholder="DD/MM/YYYY" class="date-input w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white">
+                                        <button type="button" onclick="triggerPicker('reqDateStart')" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </button>
+                                        <input type="date" id="picker_reqDateStart" class="hidden-date-picker" onchange="syncFromPicker(this, 'reqDateStart')">
+                                    </div>
+                                    <div class="relative">
+                                        <input type="text" id="reqDateEnd" required maxlength="10" placeholder="DD/MM/YYYY" class="date-input w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white">
+                                        <button type="button" onclick="triggerPicker('reqDateEnd')" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </button>
+                                        <input type="date" id="picker_reqDateEnd" class="hidden-date-picker" onchange="syncFromPicker(this, 'reqDateEnd')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 對調同事區塊 -->
+                        <div class="p-6 bg-orange-50/50 rounded-2xl space-y-5 border border-orange-100 relative mt-10">
+                            <div class="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest shadow-sm">對調同事</div>
+                            <input type="text" id="partName" required class="w-full px-5 py-4 border border-orange-200 rounded-xl text-base outline-none focus:ring-4 focus:ring-orange-100 transition-all shadow-sm" placeholder="對象姓名">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-gray-400 ml-1">職位</label>
+                                    <select id="partPos" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
+                                        <option value="" disabled selected>請選擇</option>
+                                        <option value="APN">APN</option>
+                                        <option value="RN">RN</option>
+                                        <option value="EA">EA</option>
+                                        <option value="PCA">PCA</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black text-gray-400 ml-1">調換後更位</label>
+                                    <select id="partShift" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-orange-600 outline-none">
+                                        <option value="A">A (早更)</option>
+                                        <option value="P">P (午更)</option>
+                                        <option value="N">N (夜更)</option>
+                                        <option value="D">D (全日)</option>
+                                        <option value="1-9">1-9</option>
+                                        <option value="11-7">11-7</option>
+                                        <option value="VL">VL (年假)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="block text-[10px] font-black text-orange-400 uppercase ml-1 tracking-wider">調換日期區間 (日/月/年)</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="relative">
+                                        <input type="text" id="partDateStart" required maxlength="10" placeholder="DD/MM/YYYY" class="date-input w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white">
+                                        <button type="button" onclick="triggerPicker('partDateStart')" class="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 hover:text-orange-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </button>
+                                        <input type="date" id="picker_partDateStart" class="hidden-date-picker" onchange="syncFromPicker(this, 'partDateStart')">
+                                    </div>
+                                    <div class="relative">
+                                        <input type="text" id="partDateEnd" required maxlength="10" placeholder="DD/MM/YYYY" class="date-input w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white">
+                                        <button type="button" onclick="triggerPicker('partDateEnd')" class="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 hover:text-orange-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </button>
+                                        <input type="date" id="picker_partDateEnd" class="hidden-date-picker" onchange="syncFromPicker(this, 'partDateEnd')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-black py-5 rounded-2xl shadow-2xl transition-all active:scale-[0.98] text-lg">
+                            提交調更申請
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2) 主管批核頁面 -->
+        <section id="sectionAdmin" class="hidden">
+            <div class="bg-white rounded-3xl shadow-xl border overflow-hidden">
+                <div class="p-8 border-b flex justify-between items-center bg-white flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-gray-800 tracking-tight">主管批核中心</h2>
+                        <p class="text-sm text-gray-400 mt-1">管理與審核所有調更請求</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="exportToExcel()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 text-sm font-black transition shadow-lg shadow-emerald-100">
+                            導出 Excel 報表
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-gray-400 text-[11px] uppercase font-black tracking-tighter">
+                            <tr>
+                                <th class="px-8 py-5">職位</th>
+                                <th class="px-8 py-5">申請人 / 原日期</th>
+                                <th class="px-6 py-5 text-center">原本</th>
+                                <th class="px-6 py-5 text-center">調換</th>
+                                <th class="px-8 py-5 text-right">對象 / 調換日期</th>
+                                <th class="px-8 py-5 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminDataTable" class="divide-y divide-gray-100">
+                            <tr><td colspan="6" class="px-8 py-32 text-center text-gray-300 italic font-medium">目前沒有待處理的申請</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 驗證彈窗 -->
+    <div id="passwordModal">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-sm p-8 text-center animate-in zoom-in duration-200">
+            <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <h3 class="text-xl font-black text-gray-800 mb-2">主管身份驗證</h3>
+            <p class="text-sm text-gray-400 mb-6">請輸入管理員密碼 (預設: 1234)</p>
+            <input type="password" id="adminPassword" class="w-full px-4 py-4 border rounded-2xl text-center text-2xl tracking-[1em] mb-6 outline-none focus:ring-4 focus:ring-blue-100" placeholder="••••">
+            <div class="flex gap-3">
+                <button onclick="closePasswordModal()" class="flex-1 py-4 bg-gray-100 rounded-2xl font-bold text-gray-500">取消</button>
+                <button onclick="verifyPassword()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-100">驗證</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 錯誤提示 -->
+    <div id="alertModal">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center animate-in zoom-in duration-200">
+            <div class="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h3 id="alertTitle" class="text-xl font-black text-gray-800 mb-2"></h3>
+            <p id="alertDesc" class="text-sm text-gray-500 mb-8 leading-relaxed"></p>
+            <button onclick="closeAlert()" class="w-full py-4 bg-gray-900 text-white font-black rounded-2xl">返回修改</button>
+        </div>
+    </div>
+
+    <!-- 確認提交彈窗 -->
+    <div id="confirmModal">
+        <div class="bg-white rounded-[40px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200 border-4 border-white">
+            <div class="bg-blue-600 p-8 text-white text-center">
+                <h3 class="text-2xl font-black italic tracking-tighter">確認提交申請？</h3>
+                <p class="text-blue-200 text-xs mt-1 uppercase">提交後將交由主管審核</p>
+            </div>
+            <div class="p-8 space-y-6">
+                <div class="flex justify-between items-center bg-blue-50 p-5 rounded-3xl border border-blue-100">
+                    <div>
+                        <p id="mvReqDate" class="text-[10px] text-blue-500 font-black mb-1"></p>
+                        <span id="mvReq" class="font-black text-gray-800 text-xl"></span>
+                    </div>
+                    <span id="mvReqShift" class="text-4xl font-black text-blue-600 italic"></span>
+                </div>
+                <div class="flex justify-center relative">
+                    <div class="h-[1px] w-full bg-gray-100 absolute top-1/2"></div>
+                    <div class="bg-white px-2 relative z-10 text-gray-300 font-black text-[10px]">對調</div>
+                </div>
+                <div class="flex justify-between items-center bg-orange-50 p-5 rounded-3xl border border-orange-100">
+                    <div>
+                        <p id="mvPartDate" class="text-[10px] text-orange-500 font-black mb-1"></p>
+                        <span id="mvPart" class="font-black text-gray-800 text-xl"></span>
+                    </div>
+                    <span id="mvPartShift" class="text-4xl font-black text-orange-500 italic"></span>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="closeModal()" class="flex-1 py-5 bg-gray-100 rounded-3xl font-black text-gray-400">取消</button>
+                    <button onclick="confirmSubmit()" class="flex-1 py-5 bg-blue-600 text-white font-black rounded-3xl shadow-xl shadow-blue-200">正式提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allRequests = [];
+        let tempRequest = null;
+        const ADMIN_PASSWORD = "1234";
+
+        window.onload = function() {
+            // 初始化輸入框自動格式化 (DD/MM/YYYY)
+            document.querySelectorAll('.date-input').forEach(input => {
+                input.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '');
+                    if (value.length > 8) value = value.slice(0, 8);
+                    
+                    let formatted = '';
+                    if (value.length > 0) {
+                        formatted += value.slice(0, 2);
+                        if (value.length > 2) {
+                            formatted += '/' + value.slice(2, 4);
+                            if (value.length > 4) {
+                                formatted += '/' + value.slice(4, 8);
+                            }
+                        }
+                    }
+                    e.target.value = formatted;
+                });
+            });
+        };
+
+        // 觸發隱藏的日期選擇器
+        function triggerPicker(targetId) {
+            const picker = document.getElementById('picker_' + targetId);
+            const currentVal = document.getElementById(targetId).value;
+            const parts = currentVal.split('/');
+            if (parts.length === 3) {
+                picker.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            picker.showPicker();
+        }
+
+        // 當選擇器日期改變時，同步回文字框
+        function syncFromPicker(picker, targetId) {
+            if (!picker.value) return;
+            const [y, m, d] = picker.value.split('-');
+            const formatted = `${d}/${m}/${y}`;
+            document.getElementById(targetId).value = formatted;
+        }
+
+        function isValidDate(dateStr) {
+            const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dateStr.match(regex);
+            if (!match) return false;
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+            if (month < 1 || month > 12) return false;
+            const daysInMonth = new Date(year, month, 0).getDate();
+            return day >= 1 && day <= daysInMonth;
+        }
+
+        function showAlert(title, desc) {
+            document.getElementById('alertTitle').innerText = title;
+            document.getElementById('alertDesc').innerText = desc;
+            document.getElementById('alertModal').style.display = 'flex';
+        }
+
+        function closeAlert() { document.getElementById('alertModal').style.display = 'none'; }
+        
+        function requestAdminAccess() { document.getElementById('passwordModal').style.display = 'flex'; }
+        
+        function closePasswordModal() { 
+            document.getElementById('passwordModal').style.display = 'none'; 
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function verifyPassword() {
+            if (document.getElementById('adminPassword').value === ADMIN_PASSWORD) {
+                closePasswordModal();
+                switchTab('admin');
+            } else {
+                showAlert("驗證失敗", "您輸入的密碼不正確。");
+            }
+        }
+
+        function switchTab(tab) {
+            const isApply = tab === 'apply';
+            document.getElementById('tabApply').classList.toggle('tab-active', isApply);
+            document.getElementById('tabAdmin').classList.toggle('tab-active', !isApply);
+            document.getElementById('sectionApply').classList.toggle('hidden', !isApply);
+            document.getElementById('sectionAdmin').classList.toggle('hidden', isApply);
+            if (!isApply) renderAdminTable();
+        }
+
+        function formatDateRange(start, end) { 
+            return start === end ? start : `${start} ~ ${end}`; 
+        }
+
+        document.getElementById('swapForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const rStart = document.getElementById('reqDateStart').value;
+            const rEnd = document.getElementById('reqDateEnd').value;
+            const pStart = document.getElementById('partDateStart').value;
+            const pEnd = document.getElementById('partDateEnd').value;
+
+            if (!isValidDate(rStart) || !isValidDate(rEnd) || !isValidDate(pStart) || !isValidDate(pEnd)) {
+                showAlert("日期格式錯誤", "請輸入正確的日期格式 (DD/MM/YYYY)。");
+                return;
+            }
+
+            if (document.getElementById('reqPos').value !== document.getElementById('partPos').value) {
+                showAlert("職位不匹配", "對調雙方必須具備相同的職位頭銜才能進行交換。");
+                return;
+            }
+
+            tempRequest = {
+                id: Date.now(),
+                reqName: document.getElementById('reqName').value.trim(),
+                reqPos: document.getElementById('reqPos').value,
+                reqShift: document.getElementById('reqShift').value,
+                reqDateStart: rStart,
+                reqDateEnd: rEnd,
+                partName: document.getElementById('partName').value.trim(),
+                partPos: document.getElementById('partPos').value,
+                partShift: document.getElementById('partShift').value,
+                partDateStart: pStart,
+                partDateEnd: pEnd,
+                timestamp: new Date().toLocaleString('zh-HK'),
+                status: '待批核',
+                approvalTime: '-'
+            };
+
+            document.getElementById('mvReq').innerText = tempRequest.reqName;
+            document.getElementById('mvReqDate').innerText = formatDateRange(tempRequest.reqDateStart, tempRequest.reqDateEnd);
+            document.getElementById('mvReqShift').innerText = tempRequest.reqShift;
+            document.getElementById('mvPart').innerText = tempRequest.partName;
+            document.getElementById('mvPartDate').innerText = formatDateRange(tempRequest.partDateStart, tempRequest.partDateEnd);
+            document.getElementById('mvPartShift').innerText = tempRequest.partShift;
+            document.getElementById('confirmModal').style.display = 'flex';
+        });
+
+        function closeModal() { document.getElementById('confirmModal').style.display = 'none'; }
+
+        function confirmSubmit() {
+            allRequests.push(tempRequest);
+            updatePendingBadge();
+            document.getElementById('swapForm').reset();
+            closeModal();
+            
+            const btn = document.querySelector('#swapForm button[type="submit"]');
+            const originalText = btn.innerText;
+            btn.innerText = "✓ 申請已提交";
+            btn.classList.replace('bg-gray-900', 'bg-emerald-600');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.replace('bg-emerald-600', 'bg-gray-900');
+            }, 3000);
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminDataTable');
+            if (allRequests.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-8 py-32 text-center text-gray-300 italic font-medium">目前沒有任何申請記錄</td></tr>';
+                return;
+            }
+            tbody.innerHTML = [...allRequests].reverse().map(req => `
+                <tr class="hover:bg-blue-50/30 transition-colors">
+                    <td class="px-8 py-6"><span class="text-xs font-black border px-3 py-1 rounded-lg text-gray-600 bg-white shadow-sm">${req.reqPos}</span></td>
+                    <td class="px-8 py-6"><div class="font-black text-gray-900">${req.reqName}</div><div class="text-[10px] text-blue-500 font-bold">${formatDateRange(req.reqDateStart, req.reqDateEnd)}</div></td>
+                    <td class="px-6 py-6 text-center font-black text-blue-600 text-2xl italic">${req.reqShift}</td>
+                    <td class="px-6 py-6 text-center font-black text-orange-500 text-2xl italic">${req.partShift}</td>
+                    <td class="px-8 py-6 text-right"><div class="font-black text-gray-900">${req.partName}</div><div class="text-[10px] text-orange-500 font-bold">${formatDateRange(req.partDateStart, req.partDateEnd)}</div></td>
+                    <td class="px-8 py-6 text-center">
+                        ${req.status === '待批核' ? `
+                            <div class="flex gap-2 justify-center">
+                                <button onclick="handleAction(${req.id}, '已批准')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black transition shadow-sm">批准</button>
+                                <button onclick="handleAction(${req.id}, '已拒絕')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-black transition shadow-sm">拒絕</button>
+                            </div>
+                        ` : `
+                            <div class="text-center">
+                                <span class="text-xs font-black italic uppercase ${req.status === '已批准' ? 'text-emerald-600' : 'text-red-500'}">${req.status}</span>
+                                <div class="text-[8px] text-gray-400 mt-1 uppercase">${req.approvalTime}</div>
+                            </div>
+                        `}
+                    </td>
+                </tr>`).join('');
+        }
+
+        function handleAction(id, result) {
+            const req = allRequests.find(r => r.id === id);
+            if(req) {
+                req.status = result;
+                req.approvalTime = new Date().toLocaleString('zh-HK');
+                renderAdminTable();
+                updatePendingBadge();
+            }
+        }
+
+        function updatePendingBadge() {
+            const count = allRequests.filter(r => r.status === '待批核').length;
+            const badge = document.getElementById('pendingBadge');
+            badge.innerText = count;
+            badge.classList.toggle('hidden', count === 0);
+        }
+
+        function exportToExcel() {
+            if (allRequests.length === 0) return;
+            const exportData = allRequests.map(r => ({
+                '職位': r.reqPos,
+                '申請人': r.reqName,
+                '原日期': formatDateRange(r.reqDateStart, r.reqDateEnd),
+                '原更位': r.reqShift,
+                '對象姓名': r.partName,
+                '對象日期': formatDateRange(r.partDateStart, r.partDateEnd),
+                '對象更位': r.partShift,
+                '狀態': r.status,
+                '提交時間': r.timestamp,
+                '批核時間': r.approvalTime
+            }));
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Swap_Records");
+            XLSX.writeFile(wb, `DutySwap_Report_${new Date().toLocaleDateString('zh-HK').replace(/\//g, '-')}.xlsx`);
+        }
+    </script>
+</body>
+</html>
