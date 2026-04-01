@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>醫院調更管理系統</title>
+    <title>醫院調更管理系統 - Excel 導出版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 引入 SheetJS 用於導出 Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
         .tab-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 900; }
         
-        #alertModal, #passwordModal {
+        #alertModal, #passwordModal, #shareModal, #importModal {
             display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;
         }
@@ -26,147 +28,146 @@
         
         .date-field-group:active .fake-input { background-color: #f1f5f9; border-color: #3b82f6; }
         
-        /* 更期標籤顏色微調 */
         .badge-shift { @apply px-2 py-0.5 rounded text-xs font-black text-white; }
         .bg-shift-A { background-color: #f59e0b; }
         .bg-shift-P { background-color: #10b981; }
         .bg-shift-N { background-color: #6366f1; }
         .bg-shift-O { background-color: #94a3b8; }
+        
+        .list-enter { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="min-h-screen pb-12">
 
+    <!-- 導航欄 -->
     <nav class="bg-white shadow-sm border-b sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 flex justify-between h-16 items-center">
             <div class="flex items-center gap-3">
                 <div class="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-100">
                     <i data-lucide="shuffle" class="text-white w-6 h-6"></i>
                 </div>
-                <span class="text-xl font-black text-gray-800 tracking-tight">醫院調更管理系統</span>
+                <span class="text-xl font-black text-gray-800 tracking-tight">醫院調更系統</span>
             </div>
             <div class="flex gap-2 h-full">
-                <button onclick="switchTab('apply')" id="tabApply" class="px-6 flex items-center tab-active transition-all">提交申請</button>
-                <button onclick="requestAdminAccess()" id="tabAdmin" class="px-6 flex items-center text-gray-500 hover:text-blue-600 transition-all relative">
+                <button onclick="switchTab('apply')" id="tabApply" class="px-4 md:px-6 flex items-center tab-active transition-all text-sm md:text-base">提交申請</button>
+                <button onclick="requestAdminAccess()" id="tabAdmin" class="px-4 md:px-6 flex items-center text-gray-500 hover:text-blue-600 transition-all relative text-sm md:text-base font-bold">
                     主管批核 
-                    <span id="pendingBadge" class="absolute top-3 right-2 hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full border-2 border-white font-bold">0</span>
+                    <span id="pendingBadge" class="absolute top-3 right-0 hidden bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full border-2 border-white font-bold">0</span>
                 </button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        <section id="sectionApply">
-            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-sm border p-8">
+        <!-- 提交申請頁面 -->
+        <section id="sectionApply" class="animate-in fade-in duration-500">
+            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-sm border p-6 md:p-8">
                 <div class="flex items-center gap-2 mb-8">
                     <span class="w-2 h-8 bg-blue-600 rounded-full"></span>
                     <h2 class="text-2xl font-black text-gray-800">建立新調更申請</h2>
                 </div>
-                <form id="swapForm" class="space-y-10">
-                    
+                <form id="swapForm" class="space-y-8">
                     <!-- 申請人區塊 -->
                     <div class="p-6 bg-blue-50/50 rounded-2xl space-y-5 border border-blue-100 relative">
                         <div class="absolute -top-3 left-6 bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest shadow-sm">本人 / 申請人</div>
-                        
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="relative col-span-2 md:col-span-1">
-                                <input type="text" id="reqName" required class="w-full pl-5 pr-12 py-4 border border-blue-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-blue-400 bg-white" placeholder="您的姓名">
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400"><i data-lucide="user" class="w-5 h-5"></i></div>
-                            </div>
-                            <select id="reqPos" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none md:col-span-1">
+                            <input type="text" id="reqName" required class="w-full px-5 py-4 border border-blue-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-blue-400 bg-white" placeholder="您的姓名">
+                            <select id="reqPos" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
                                 <option value="" disabled selected>職位</option>
                                 <option value="APN">APN</option><option value="RN">RN</option><option value="EA">EA</option><option value="PCA">PCA</option>
                             </select>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-blue-400 ml-1">原本更期</label>
                                 <select id="reqOldShift" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-600 outline-none">
                                     <option value="A">A (早更)</option><option value="P">P (午更)</option><option value="N">N (夜更)</option><option value="O">O (放假)</option>
-                                    <option value="D">D (全日)</option><option value="1-9">1-9</option><option value="11-7">11-7</option><option value="VL">VL (年假)</option>
+                                    <option value="D">D (全日)</option><option value="VL">VL (年假)</option>
                                 </select>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-blue-600 ml-1">調換後更期</label>
                                 <select id="reqNewShift" required class="w-full px-4 py-3 border border-blue-400 rounded-xl text-sm bg-white font-bold text-blue-600 outline-none shadow-sm">
                                     <option value="A">A (早更)</option><option value="P">P (午更)</option><option value="N">N (夜更)</option><option value="O">O (放假)</option>
-                                    <option value="D">D (全日)</option><option value="1-9">1-9</option><option value="11-7">11-7</option><option value="VL">VL (年假)</option>
+                                    <option value="D">D (全日)</option><option value="VL">VL (年假)</option>
                                 </select>
                             </div>
                         </div>
-
                         <div class="date-field-group" onclick="triggerDatePicker('picker_reqDate')">
                             <div class="fake-input" id="disp_reqDate">選擇調更日期 (日/月/年)</div>
-                            <div class="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400"><i data-lucide="calendar" class="w-4 h-4"></i></div>
                             <input type="date" id="picker_reqDate" class="real-date-picker" onchange="updateDisplay(this, 'disp_reqDate')">
                         </div>
                     </div>
 
                     <!-- 對調同事區塊 -->
-                    <div class="p-6 bg-orange-50/50 rounded-2xl space-y-5 border border-orange-100 relative mt-10">
+                    <div class="p-6 bg-orange-50/50 rounded-2xl space-y-5 border border-orange-100 relative mt-6">
                         <div class="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest shadow-sm">對調同事</div>
-                        
                         <div class="grid grid-cols-2 gap-4">
-                            <div class="relative col-span-2 md:col-span-1">
-                                <input type="text" id="partName" required class="w-full pl-5 pr-12 py-4 border border-orange-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-orange-400 bg-white" placeholder="對象姓名">
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400"><i data-lucide="user-plus" class="w-5 h-5"></i></div>
-                            </div>
-                            <select id="partPos" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none md:col-span-1">
+                            <input type="text" id="partName" required class="w-full px-5 py-4 border border-orange-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-orange-400 bg-white" placeholder="對象姓名">
+                            <select id="partPos" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
                                 <option value="" disabled selected>職位</option>
                                 <option value="APN">APN</option><option value="RN">RN</option><option value="EA">EA</option><option value="PCA">PCA</option>
                             </select>
                         </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-orange-400 ml-1">原本更期</label>
                                 <select id="partOldShift" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-600 outline-none">
                                     <option value="A">A (早更)</option><option value="P">P (午更)</option><option value="N">N (夜更)</option><option value="O">O (放假)</option>
-                                    <option value="D">D (全日)</option><option value="1-9">1-9</option><option value="11-7">11-7</option><option value="VL">VL (年假)</option>
+                                    <option value="D">D (全日)</option><option value="VL">VL (年假)</option>
                                 </select>
                             </div>
                             <div class="space-y-1">
                                 <label class="text-[10px] font-bold text-orange-600 ml-1">調換後更期</label>
                                 <select id="partNewShift" required class="w-full px-4 py-3 border border-orange-400 rounded-xl text-sm bg-white font-bold text-orange-600 outline-none shadow-sm">
                                     <option value="A">A (早更)</option><option value="P">P (午更)</option><option value="N">N (夜更)</option><option value="O">O (放假)</option>
-                                    <option value="D">D (全日)</option><option value="1-9">1-9</option><option value="11-7">11-7</option><option value="VL">VL (年假)</option>
+                                    <option value="D">D (全日)</option><option value="VL (年假)">VL (年假)</option>
                                 </select>
                             </div>
                         </div>
-
                         <div class="date-field-group" onclick="triggerDatePicker('picker_partDate')">
                             <div class="fake-input" id="disp_partDate">選擇對象調更日期 (日/月/年)</div>
-                            <div class="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400"><i data-lucide="calendar" class="w-4 h-4"></i></div>
                             <input type="date" id="picker_partDate" class="real-date-picker" onchange="updateDisplay(this, 'disp_partDate')">
                         </div>
                     </div>
 
                     <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-black py-5 rounded-2xl shadow-xl transition-all active:scale-[0.98] text-lg flex items-center justify-center gap-2">
                         <i data-lucide="send" class="w-5 h-5"></i>
-                        提交調更申請
+                        生成代碼並發送
                     </button>
                 </form>
             </div>
         </section>
 
-        <!-- 管理頁面 -->
-        <section id="sectionAdmin" class="hidden">
+        <!-- 主管批核頁面 -->
+        <section id="sectionAdmin" class="hidden animate-in slide-in-from-bottom duration-500">
             <div class="bg-white rounded-3xl shadow-sm border overflow-hidden">
-                <div class="p-8 border-b flex justify-between items-center bg-white flex-wrap gap-4">
-                    <h2 class="text-2xl font-black text-gray-800 flex items-center gap-2">
-                        <i data-lucide="database" class="text-blue-600"></i>
-                        主管批核中心
+                <div class="p-6 border-b flex justify-between items-center bg-white flex-wrap gap-4">
+                    <h2 class="text-xl font-black text-gray-800 flex items-center gap-2">
+                        <i data-lucide="shield-check" class="text-blue-600"></i>
+                        批核中心 <span class="text-xs font-normal text-gray-400 ml-2">(本地儲存)</span>
                     </h2>
-                    <button onclick="clearAllData()" class="text-red-500 text-xs font-bold border border-red-100 px-3 py-1 rounded-lg hover:bg-red-50">清除所有記錄</button>
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="exportToExcel()" class="flex-1 md:flex-none bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl hover:bg-emerald-700 flex items-center justify-center gap-1 shadow-lg shadow-emerald-100">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 導出 Excel
+                        </button>
+                        <button onclick="openImportModal()" class="flex-1 md:flex-none bg-blue-600 text-white text-xs font-bold px-4 py-3 rounded-xl hover:bg-blue-700 flex items-center justify-center gap-1 shadow-lg shadow-blue-100">
+                            <i data-lucide="plus-circle" class="w-4 h-4"></i> 匯入申請
+                        </button>
+                        <button onclick="clearAllData()" class="text-red-500 text-xs font-bold border border-red-100 px-3 py-3 rounded-xl hover:bg-red-50">清空</button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50 text-gray-400 text-[11px] uppercase font-black">
+                    <table class="w-full text-left" id="adminTableElement">
+                        <thead class="bg-gray-50 text-gray-400 text-[10px] uppercase font-black tracking-widest">
                             <tr>
-                                <th class="px-8 py-5">職位</th>
-                                <th class="px-8 py-5">申請人 / 變更</th>
-                                <th class="px-8 py-5 text-right">對象 / 變更</th>
-                                <th class="px-8 py-5 text-center">狀態與操作</th>
+                                <th class="px-6 py-4">申請人資訊</th>
+                                <th class="px-6 py-4 text-right">對調同事</th>
+                                <th class="px-6 py-4 text-center">狀態/操作</th>
                             </tr>
                         </thead>
                         <tbody id="adminDataTable" class="divide-y divide-gray-100 text-sm"></tbody>
@@ -176,11 +177,38 @@
         </section>
     </main>
 
-    <!-- Modals -->
+    <!-- Modals (Share, Import, Password, Alert) -->
+    <div id="shareModal">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
+            <div class="mx-auto mb-4 bg-green-100 text-green-600 w-16 h-16 rounded-full flex items-center justify-center"><i data-lucide="share-2" class="w-8 h-8"></i></div>
+            <h3 class="text-2xl font-black mb-2">代碼已生成</h3>
+            <p class="text-gray-500 text-sm mb-6">請將代碼傳給主管匯入：</p>
+            <div class="bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300 mb-6 overflow-hidden">
+                <code id="shareCodeText" class="text-[10px] break-all text-blue-600 font-mono block max-h-24 overflow-y-auto"></code>
+            </div>
+            <div class="space-y-3">
+                <button onclick="copyShareCode()" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black flex items-center justify-center gap-2"><i data-lucide="copy" class="w-5 h-5"></i> 複製代碼</button>
+                <button onclick="whatsappShare()" class="w-full py-4 bg-emerald-500 text-white rounded-xl font-black flex items-center justify-center gap-2"><i data-lucide="message-circle" class="w-5 h-5"></i> 傳送給主管</button>
+                <button onclick="closeShareModal()" class="w-full py-2 text-gray-400 font-bold text-sm">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="importModal">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+            <h3 class="text-xl font-black mb-4">匯入新申請</h3>
+            <textarea id="importArea" class="w-full border p-4 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500 h-40 text-[10px] font-mono" placeholder="在此貼上加密代碼..."></textarea>
+            <div class="flex gap-2">
+                <button onclick="closeImportModal()" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">取消</button>
+                <button onclick="processImport()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">確認匯入</button>
+            </div>
+        </div>
+    </div>
+
     <div id="passwordModal">
         <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
             <h3 class="text-xl font-black mb-4">管理員驗證</h3>
-            <input type="password" id="adminPassword" class="w-full border p-4 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="密碼 (預設 1234)">
+            <input type="password" id="adminPassword" class="w-full border p-4 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="密碼 (1234)">
             <div class="flex gap-2">
                 <button onclick="closePasswordModal()" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold">取消</button>
                 <button onclick="verifyPassword()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">進入</button>
@@ -190,47 +218,34 @@
 
     <div id="alertModal">
         <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
-            <div id="alertIcon" class="mx-auto mb-4 bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center">
-                <i data-lucide="check" class="w-6 h-6"></i>
-            </div>
-            <h3 id="alertTitle" class="text-xl font-black mb-2">提示</h3>
-            <p id="alertDesc" class="text-gray-500 mb-6"></p>
+            <h3 id="alertTitle" class="text-xl font-black mb-2"></h3>
+            <p id="alertDesc" class="text-gray-500 mb-6 text-sm"></p>
             <button onclick="closeAlert()" class="w-full py-4 bg-gray-900 text-white rounded-xl font-black">確定</button>
         </div>
     </div>
 
     <script>
         lucide.createIcons();
-        let allRequests = JSON.parse(localStorage.getItem('local_duty_data_v2')) || [];
+        let allRequests = JSON.parse(localStorage.getItem('local_duty_data_v4')) || [];
+        let currentShareCode = "";
 
-        window.triggerDatePicker = (pickerId) => {
-            const picker = document.getElementById(pickerId);
-            if (picker.showPicker) picker.showPicker(); else picker.click();
-        };
-
-        window.updateDisplay = (picker, displayId) => {
-            const val = picker.value;
-            if (!val) return;
-            const [y, m, d] = val.split('-');
-            const displayEl = document.getElementById(displayId);
-            displayEl.innerText = `${d}/${m}/${y}`;
-            displayEl.style.color = "#1e293b";
-            displayEl.style.fontWeight = "bold";
-            displayEl.parentElement.style.borderColor = "#3b82f6";
+        window.triggerDatePicker = (p) => { const el = document.getElementById(p); if(el.showPicker) el.showPicker(); else el.click(); };
+        window.updateDisplay = (p, d) => {
+            const val = p.value; if(!val) return;
+            const [y, m, d_val] = val.split('-');
+            const el = document.getElementById(d);
+            el.innerText = `${d_val}/${m}/${y}`; el.style.color = "#1e293b"; el.style.fontWeight = "bold";
+            el.parentElement.style.borderColor = "#3b82f6";
         };
 
         document.getElementById('swapForm').onsubmit = (e) => {
             e.preventDefault();
             const d1 = document.getElementById('disp_reqDate').innerText;
             const d2 = document.getElementById('disp_partDate').innerText;
-
-            if (d1.includes('選擇') || d2.includes('選擇')) {
-                showAlert("請選擇日期", "申請人與對調同事的日期均為必填。");
-                return;
-            }
+            if (d1.includes('選擇') || d2.includes('選擇')) { showAlert("日期未選", "請選擇日期。"); return; }
 
             const data = {
-                id: Date.now(),
+                id: Date.now() + Math.random(),
                 reqName: document.getElementById('reqName').value,
                 reqPos: document.getElementById('reqPos').value,
                 reqOldShift: document.getElementById('reqOldShift').value,
@@ -245,69 +260,103 @@
                 timestamp: new Date().toLocaleString()
             };
 
-            allRequests.unshift(data);
-            localStorage.setItem('local_duty_data_v2', JSON.stringify(allRequests));
-            showAlert("提交成功", "申請已儲存，請通知主管批核。");
-            e.target.reset();
-            resetUI();
-            renderAdminTable();
-            updateBadge();
+            currentShareCode = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+            document.getElementById('shareCodeText').innerText = currentShareCode;
+            document.getElementById('shareModal').style.display = 'flex';
+            e.target.reset(); resetDateUI();
         };
 
-        function resetUI() {
+        function resetDateUI() {
             document.getElementById('disp_reqDate').innerText = "選擇調更日期 (日/月/年)";
             document.getElementById('disp_partDate').innerText = "選擇對象調更日期 (日/月/年)";
-            document.querySelectorAll('.fake-input').forEach(i => {
-                i.style.color = "#64748b";
-                i.style.fontWeight = "normal";
-                i.parentElement.style.borderColor = "#e2e8f0";
-            });
+            document.querySelectorAll('.fake-input').forEach(i => { i.style.color = "#64748b"; i.style.fontWeight="normal"; i.parentElement.style.borderColor="#e2e8f0"; });
         }
 
-        // 輔助函式：獲取更期對應的 CSS class
-        function getShiftClass(shift) {
-            if (['A', 'P', 'N', 'O'].includes(shift)) return `bg-shift-${shift}`;
-            return 'bg-gray-400';
+        window.copyShareCode = () => {
+            const el = document.createElement('textarea'); el.value = currentShareCode;
+            document.body.appendChild(el); el.select(); document.execCommand('copy');
+            document.body.removeChild(el); showAlert("已複製", "請傳送給主管。");
+        };
+
+        window.whatsappShare = () => {
+            const text = encodeURIComponent(`【調更申請】\n代碼：\n${currentShareCode}`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        };
+
+        // 導出 Excel 核心邏輯
+        window.exportToExcel = () => {
+            if (allRequests.length === 0) { showAlert("無資料", "目前沒有申請記錄可以導出。"); return; }
+            
+            // 整理資料格式
+            const exportData = allRequests.map(r => ({
+                "狀態": r.status,
+                "申請時間": r.timestamp,
+                "申請人姓名": r.reqName,
+                "申請人職位": r.reqPos,
+                "申請人日期": r.reqDate,
+                "申請人原更": r.reqOldShift,
+                "申請人新更": r.reqNewShift,
+                "對調同事姓名": r.partName,
+                "對調同事職位": r.partPos,
+                "對調同事日期": r.partDate,
+                "對調同事原更": r.partOldShift,
+                "對調同事新更": r.partNewShift
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "調更申請");
+            
+            const fileName = `調更申請報表_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showAlert("導出成功", `檔案已下載：${fileName}`);
+        };
+
+        window.processImport = () => {
+            const code = document.getElementById('importArea').value.trim();
+            if(!code) return;
+            try {
+                const data = JSON.parse(decodeURIComponent(escape(atob(code))));
+                if (!allRequests.find(r => r.id === data.id)) {
+                    allRequests.unshift(data);
+                    saveAndRender();
+                    closeImportModal();
+                    showAlert("成功", "申請已加入清單。");
+                } else {
+                    showAlert("重複", "該筆申請已在清單中。");
+                }
+            } catch (err) { showAlert("錯誤", "無效的代碼格式。"); }
+        };
+
+        function saveAndRender() {
+            localStorage.setItem('local_duty_data_v4', JSON.stringify(allRequests));
+            renderAdminTable();
+            updateBadge();
         }
 
         window.renderAdminTable = () => {
             const tbody = document.getElementById('adminDataTable');
             if (allRequests.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="py-20 text-center text-gray-300">無本地記錄</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="py-20 text-center text-gray-300 font-bold">暫無申請</td></tr>';
                 return;
             }
             tbody.innerHTML = allRequests.map(r => `
-                <tr class="hover:bg-gray-50 border-b">
-                    <td class="px-8 py-6">
-                        <span class="bg-gray-800 text-white px-2 py-1 rounded text-[10px] font-bold">${r.reqPos}</span>
+                <tr class="hover:bg-blue-50/30 border-b list-enter">
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-2 font-black">${r.reqName} <span class="text-[10px] bg-blue-100 text-blue-600 px-1 rounded">${r.reqPos}</span></div>
+                        <div class="text-[10px] text-gray-400 font-bold">${r.reqDate} (${r.reqOldShift}→${r.reqNewShift})</div>
                     </td>
-                    <td class="px-8 py-6">
-                        <div class="font-black text-gray-800 text-base">${r.reqName}</div>
-                        <div class="text-[10px] text-gray-400 mb-2">${r.reqDate}</div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-400 line-through text-xs">${r.reqOldShift}</span>
-                            <i data-lucide="arrow-right" class="w-3 h-3 text-blue-500"></i>
-                            <span class="badge-shift ${getShiftClass(r.reqNewShift)}">${r.reqNewShift}</span>
-                        </div>
+                    <td class="px-6 py-5 text-right">
+                        <div class="flex items-center justify-end gap-2 font-black">${r.partName} <span class="text-[10px] bg-orange-100 text-orange-600 px-1 rounded">${r.partPos}</span></div>
+                        <div class="text-[10px] text-gray-400 font-bold">${r.partDate} (${r.partOldShift}→${r.partNewShift})</div>
                     </td>
-                    <td class="px-8 py-6 text-right">
-                        <div class="font-black text-gray-800 text-base">${r.partName}</div>
-                        <div class="text-[10px] text-gray-400 mb-2">${r.partDate}</div>
-                        <div class="flex items-center gap-2 justify-end">
-                            <span class="text-gray-400 line-through text-xs">${r.partOldShift}</span>
-                            <i data-lucide="arrow-right" class="w-3 h-3 text-orange-500"></i>
-                            <span class="badge-shift ${getShiftClass(r.partNewShift)}">${r.partNewShift}</span>
-                        </div>
-                    </td>
-                    <td class="px-8 py-6 text-center">
-                        <div class="flex flex-col items-center gap-2">
-                            <span class="text-[10px] font-black tracking-widest uppercase ${r.status === '已批准' ? 'text-emerald-500' : (r.status === '已拒絕' ? 'text-red-400' : 'text-gray-400')}">${r.status}</span>
+                    <td class="px-6 py-5 text-center">
+                        <span class="text-[10px] font-black ${r.status === '已批准' ? 'text-emerald-500' : (r.status === '已拒絕' ? 'text-red-500' : 'text-gray-400')}">${r.status}</span>
+                        <div class="mt-2 flex justify-center gap-2">
                             ${r.status === '待批核' ? `
-                                <div class="flex gap-2">
-                                    <button onclick="updateStatus(${r.id}, '已批准')" class="p-2 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-600 hover:text-white transition-all"><i data-lucide="check" class="w-4 h-4"></i></button>
-                                    <button onclick="updateStatus(${r.id}, '已拒絕')" class="p-2 bg-red-50 text-red-600 rounded-full hover:bg-red-600 hover:text-white transition-all"><i data-lucide="x" class="w-4 h-4"></i></button>
-                                </div>
-                            ` : `<button onclick="deleteRow(${r.id})" class="text-gray-300 hover:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`}
+                                <button onclick="updateStatus(${r.id}, '已批准')" class="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><i data-lucide="check" class="w-3 h-3"></i></button>
+                                <button onclick="updateStatus(${r.id}, '已拒絕')" class="p-2 bg-red-50 text-red-600 rounded-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
+                            ` : `<button onclick="deleteRow(${r.id})" class="text-gray-300 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`}
                         </div>
                     </td>
                 </tr>
@@ -315,54 +364,26 @@
             lucide.createIcons();
         };
 
-        window.updateStatus = (id, s) => {
-            allRequests = allRequests.map(r => r.id === id ? {...r, status: s} : r);
-            localStorage.setItem('local_duty_data_v2', JSON.stringify(allRequests));
-            renderAdminTable();
-            updateBadge();
-        };
-
-        window.deleteRow = (id) => {
-            allRequests = allRequests.filter(r => r.id !== id);
-            localStorage.setItem('local_duty_data_v2', JSON.stringify(allRequests));
-            renderAdminTable();
-            updateBadge();
-        };
-
-        window.clearAllData = () => { if(confirm("確定清空所有本地記錄？")) { allRequests = []; localStorage.removeItem('local_duty_data_v2'); renderAdminTable(); updateBadge(); } };
-
+        window.updateStatus = (id, s) => { allRequests = allRequests.map(r => r.id === id ? {...r, status: s} : r); saveAndRender(); };
+        window.deleteRow = (id) => { if(confirm("刪除？")) { allRequests = allRequests.filter(r => r.id !== id); saveAndRender(); } };
+        window.clearAllData = () => { if(confirm("清空？")) { allRequests = []; saveAndRender(); } };
         window.switchTab = (t) => {
             document.getElementById('sectionApply').classList.toggle('hidden', t !== 'apply');
             document.getElementById('sectionAdmin').classList.toggle('hidden', t === 'apply');
             document.getElementById('tabApply').classList.toggle('tab-active', t === 'apply');
             document.getElementById('tabAdmin').classList.toggle('tab-active', t !== 'apply');
         };
-
         window.requestAdminAccess = () => document.getElementById('passwordModal').style.display = 'flex';
         window.closePasswordModal = () => document.getElementById('passwordModal').style.display = 'none';
-        window.verifyPassword = () => {
-            if (document.getElementById('adminPassword').value === "1234") {
-                closePasswordModal();
-                switchTab('admin');
-            } else { showAlert("錯誤", "驗證失敗，請重試。"); }
-        };
-
-        window.updateBadge = () => {
-            const count = allRequests.filter(r => r.status === '待批核').length;
-            const b = document.getElementById('pendingBadge');
-            b.innerText = count;
-            b.classList.toggle('hidden', count === 0);
-        };
-
-        window.showAlert = (t, d) => {
-            document.getElementById('alertTitle').innerText = t;
-            document.getElementById('alertDesc').innerText = d;
-            document.getElementById('alertModal').style.display = 'flex';
-        };
+        window.verifyPassword = () => { if (document.getElementById('adminPassword').value === "1234") { closePasswordModal(); switchTab('admin'); } else { alert("錯誤"); } };
+        window.updateBadge = () => { const count = allRequests.filter(r => r.status === '待批核').length; const b = document.getElementById('pendingBadge'); b.innerText = count; b.classList.toggle('hidden', count === 0); };
+        window.showAlert = (t, d) => { document.getElementById('alertTitle').innerText = t; document.getElementById('alertDesc').innerText = d; document.getElementById('alertModal').style.display = 'flex'; };
         window.closeAlert = () => document.getElementById('alertModal').style.display = 'none';
+        window.closeShareModal = () => document.getElementById('shareModal').style.display = 'none';
+        window.openImportModal = () => document.getElementById('importModal').style.display = 'flex';
+        window.closeImportModal = () => document.getElementById('importModal').style.display = 'none';
 
-        renderAdminTable();
-        updateBadge();
+        document.addEventListener('DOMContentLoaded', () => { renderAdminTable(); updateBadge(); });
     </script>
 </body>
 </html>
