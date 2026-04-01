@@ -20,8 +20,9 @@
             display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 1rem;
         }
-        .hidden-date-picker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10; }
-        .icon-container { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8; }
+        /* 隱藏的原生日曆選取器，置於圖標下方以便觸發 */
+        .hidden-date-picker { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; opacity: 0; cursor: pointer; z-index: 20; }
+        .icon-container { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8; z-index: 10; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -84,12 +85,12 @@
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="relative group">
-                                <input type="text" id="reqDateStart" required readonly placeholder="開始日期" class="w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white cursor-pointer transition-colors">
+                                <input type="text" id="reqDateStart" required placeholder="日/月/年 (如 01/01/2024)" class="w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white transition-colors focus:border-blue-400" onblur="validateManualInput(this)">
                                 <div class="icon-container"><i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i></div>
                                 <input type="date" id="picker_reqDateStart" class="hidden-date-picker" onchange="syncFromPicker(this, 'reqDateStart')">
                             </div>
                             <div class="relative group">
-                                <input type="text" id="reqDateEnd" required readonly placeholder="結束日期" class="w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white cursor-pointer transition-colors">
+                                <input type="text" id="reqDateEnd" required placeholder="日/月/年 (如 01/01/2024)" class="w-full pl-4 pr-10 py-3 border border-blue-200 rounded-xl text-sm outline-none bg-white transition-colors focus:border-blue-400" onblur="validateManualInput(this)">
                                 <div class="icon-container"><i data-lucide="calendar-range" class="w-4 h-4 text-blue-400"></i></div>
                                 <input type="date" id="picker_reqDateEnd" class="hidden-date-picker" onchange="syncFromPicker(this, 'reqDateEnd')">
                             </div>
@@ -121,12 +122,12 @@
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="relative group">
-                                <input type="text" id="partDateStart" required readonly placeholder="開始日期" class="w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white cursor-pointer transition-colors">
+                                <input type="text" id="partDateStart" required placeholder="日/月/年" class="w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white transition-colors focus:border-orange-400" onblur="validateManualInput(this)">
                                 <div class="icon-container"><i data-lucide="calendar" class="w-4 h-4 text-orange-400"></i></div>
                                 <input type="date" id="picker_partDateStart" class="hidden-date-picker" onchange="syncFromPicker(this, 'partDateStart')">
                             </div>
                             <div class="relative group">
-                                <input type="text" id="partDateEnd" required readonly placeholder="結束日期" class="w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white cursor-pointer transition-colors">
+                                <input type="text" id="partDateEnd" required placeholder="日/月/年" class="w-full pl-4 pr-10 py-3 border border-orange-200 rounded-xl text-sm outline-none bg-white transition-colors focus:border-orange-400" onblur="validateManualInput(this)">
                                 <div class="icon-container"><i data-lucide="calendar-range" class="w-4 h-4 text-orange-400"></i></div>
                                 <input type="date" id="picker_partDateEnd" class="hidden-date-picker" onchange="syncFromPicker(this, 'partDateEnd')">
                             </div>
@@ -221,7 +222,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, updateDoc, doc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Initialize Lucide Icons
+        // 初始化 Lucide 圖標
         lucide.createIcons();
 
         const firebaseConfig = JSON.parse(__firebase_config);
@@ -244,7 +245,7 @@
                 }
             } catch (error) {
                 console.error("Auth initialization failed:", error);
-                showAlert("連線失敗", "無法建立安全連線，請檢查網路或重新整理。");
+                showAlert("連線失敗", "無法建立安全連線。");
             }
         };
 
@@ -252,8 +253,8 @@
             if (user) {
                 document.getElementById('loadingOverlay').style.display = 'none';
                 startListening(user.uid);
-            } else {
-                if (unsubscribe) unsubscribe();
+            } else if (unsubscribe) {
+                unsubscribe();
             }
         });
 
@@ -262,11 +263,7 @@
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'requests');
             unsubscribe = onSnapshot(colRef, (snapshot) => {
                 allRequests = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                allRequests.sort((a, b) => {
-                    const timeA = a.createdAt?.seconds || 0;
-                    const timeB = b.createdAt?.seconds || 0;
-                    return timeB - timeA;
-                });
+                allRequests.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 renderAdminTable();
                 updatePendingBadge();
             }, (error) => {
@@ -274,24 +271,62 @@
             });
         }
 
+        // 當從隱藏日曆選擇日期時同步到文字框
         window.syncFromPicker = (picker, targetId) => {
             if (!picker.value) return;
             const [y, m, d] = picker.value.split('-');
             const formatted = `${d}/${m}/${y}`;
             document.getElementById(targetId).value = formatted;
+            
+            // 自動連動結束日期（如果尚未填寫）
             if (targetId.endsWith('Start')) {
                 const endId = targetId.replace('Start', 'End');
+                const endPickerId = 'picker_' + endId;
                 if (!document.getElementById(endId).value) {
                     document.getElementById(endId).value = formatted;
-                    document.getElementById('picker_' + endId).value = picker.value;
+                    document.getElementById(endPickerId).value = picker.value;
                 }
+            }
+        };
+
+        // 手動輸入驗證與同步
+        window.validateManualInput = (input) => {
+            const val = input.value.trim();
+            if (!val) return;
+
+            // 支援 DD/MM/YYYY 或 DD-MM-YYYY 或 D/M/YYYY
+            const dateRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/;
+            const match = val.match(dateRegex);
+
+            if (match) {
+                let d = match[1].padStart(2, '0');
+                let m = match[2].padStart(2, '0');
+                let y = match[3];
+                
+                // 檢查日期有效性
+                const testDate = new Date(`${y}-${m}-${d}`);
+                if (isNaN(testDate.getTime())) {
+                    showAlert("日期無效", "請輸入正確的日期格式（如：31/12/2024）");
+                    input.value = "";
+                    return;
+                }
+
+                const formatted = `${d}/${m}/${y}`;
+                input.value = formatted;
+                
+                // 同步到底層 Picker
+                const picker = document.getElementById('picker_' + input.id);
+                if (picker) picker.value = `${y}-${m}-${d}`;
+            } else {
+                showAlert("格式錯誤", "請使用 DD/MM/YYYY 格式輸入日期。");
+                input.value = "";
             }
         };
 
         document.getElementById('swapForm').addEventListener('submit', (e) => {
             e.preventDefault();
             if (!auth.currentUser) {
-                showAlert("未連線", "系統正在嘗試連線雲端，請稍後。");
+                showAlert("未連線", "系統正在嘗試連線雲端。");
                 return;
             }
 
@@ -346,10 +381,10 @@
                 await addDoc(colRef, tempRequest);
                 document.getElementById('swapForm').reset();
                 closeModal();
-                showAlert("提交成功", "申請已成功上傳雲端，所有設備均可查閱。");
+                showAlert("提交成功", "申請已成功上傳雲端。");
             } catch (e) {
                 console.error("Submit error:", e);
-                showAlert("連線錯誤", "無法上傳數據，請檢查網路連線。");
+                showAlert("連線錯誤", "無法上傳數據。");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "正式提交";
