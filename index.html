@@ -19,7 +19,6 @@
             backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1.5rem;
         }
 
-        /* 強化 QR Code 顯示區域 */
         #qrcode-container {
             background: white;
             padding: 24px;
@@ -33,7 +32,7 @@
             align-items: center;
         }
         #qrcode img { 
-            image-rendering: pixelated; /* 讓像素邊緣更銳利 */
+            image-rendering: pixelated;
             border: 4px solid white;
         }
     </style>
@@ -46,7 +45,7 @@
                 <div class="bg-blue-600 p-1.5 rounded-lg">
                     <i data-lucide="hospital" class="text-white w-5 h-5"></i>
                 </div>
-                <span class="text-lg font-black text-gray-800">調更系統 v3.1</span>
+                <span class="text-lg font-black text-gray-800">調更系統 v3.2</span>
             </div>
             <div class="flex gap-1 h-full">
                 <button onclick="switchTab('apply')" id="tabApply" class="px-3 flex items-center tab-active text-sm">申請</button>
@@ -58,9 +57,8 @@
     </nav>
 
     <main class="max-w-7xl mx-auto p-4">
-        <!-- 頂部快速操作 -->
         <section id="sectionApply" class="space-y-4">
-            <div onclick="openScanModal('status')" class="bg-blue-600 p-5 rounded-2xl text-white flex justify-between items-center shadow-lg active:scale-95 transition-all">
+            <div onclick="openScanModal('status')" class="bg-blue-600 p-5 rounded-2xl text-white flex justify-between items-center shadow-lg active:scale-95 transition-all cursor-pointer">
                 <div class="flex items-center gap-4">
                     <i data-lucide="search" class="w-8 h-8 opacity-80"></i>
                     <div>
@@ -72,40 +70,66 @@
             </div>
 
             <div class="bg-white rounded-3xl shadow-md p-6 border border-slate-200">
-                <h2 class="text-xl font-black mb-6">填寫調更資料</h2>
+                <h2 class="text-xl font-black mb-6 text-slate-800">填寫調更資料</h2>
                 <form id="swapForm" class="space-y-6">
+                    <!-- 申請人部分 -->
                     <div class="bg-slate-50 p-4 rounded-2xl space-y-3">
                         <div class="flex items-center gap-2 mb-2 text-blue-600 font-black text-sm border-b pb-2 border-blue-100">
                             <i data-lucide="user" class="w-4 h-4"></i> 申請人
                         </div>
                         <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="reqName" required placeholder="姓名" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
+                            <input type="text" id="reqName" required placeholder="姓名" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm focus:ring-2 focus:ring-blue-500">
                             <select id="reqPos" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
                                 <option>RN</option><option>APN</option><option>EA</option><option>PCA</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-3 gap-2">
-                            <select id="reqOldShift" class="p-2 rounded-lg text-xs bg-white ring-1 ring-slate-200"><option>原: A</option><option>原: P</option><option>原: N</option><option>原: O</option></select>
-                            <div class="flex items-center justify-center"><i data-lucide="arrow-right" class="w-4 h-4 text-slate-300"></i></div>
-                            <select id="reqNewShift" class="p-2 rounded-lg text-xs bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-bold"><option>換: A</option><option>換: P</option><option>換: N</option><option>換: O</option></select>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">原本更期</label>
+                                <select id="reqOldShift" class="p-2 rounded-lg text-xs bg-white ring-1 ring-slate-200">
+                                    <option>A</option><option>P</option><option>N</option><option>O</option>
+                                    <option>D</option><option>AL</option><option>11-7</option><option>1-9</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-center pt-4"><i data-lucide="arrow-right" class="w-4 h-4 text-slate-300"></i></div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10px] font-bold text-blue-400 ml-1">調換後更期</label>
+                                <select id="reqNewShift" class="p-2 rounded-lg text-xs bg-blue-50 text-blue-700 ring-1 ring-blue-200 font-bold">
+                                    <option>A</option><option>P</option><option>N</option><option>O</option>
+                                    <option>D</option><option>AL</option><option>11-7</option><option>1-9</option>
+                                </select>
+                            </div>
                         </div>
                         <input type="date" id="reqDate" required class="w-full p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
                     </div>
 
+                    <!-- 對調同事部分 -->
                     <div class="bg-slate-50 p-4 rounded-2xl space-y-3">
                         <div class="flex items-center gap-2 mb-2 text-orange-600 font-black text-sm border-b pb-2 border-orange-100">
                             <i data-lucide="users" class="w-4 h-4"></i> 對調同事
                         </div>
                         <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="partName" required placeholder="姓名" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
+                            <input type="text" id="partName" required placeholder="姓名" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm focus:ring-2 focus:ring-orange-500">
                             <select id="partPos" class="p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
                                 <option>RN</option><option>APN</option><option>EA</option><option>PCA</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-3 gap-2">
-                            <select id="partOldShift" class="p-2 rounded-lg text-xs bg-white ring-1 ring-slate-200"><option>原: A</option><option>原: P</option><option>原: N</option><option>原: O</option></select>
-                            <div class="flex items-center justify-center"><i data-lucide="arrow-right" class="w-4 h-4 text-slate-300"></i></div>
-                            <select id="partNewShift" class="p-2 rounded-lg text-xs bg-orange-50 text-orange-700 ring-1 ring-orange-200 font-bold"><option>換: A</option><option>換: P</option><option>換: N</option><option>換: O</option></select>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10px] font-bold text-slate-400 ml-1">原本更期</label>
+                                <select id="partOldShift" class="p-2 rounded-lg text-xs bg-white ring-1 ring-slate-200">
+                                    <option>A</option><option>P</option><option>N</option><option>O</option>
+                                    <option>D</option><option>AL</option><option>11-7</option><option>1-9</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-center pt-4"><i data-lucide="arrow-right" class="w-4 h-4 text-slate-300"></i></div>
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10px] font-bold text-orange-400 ml-1">調換後更期</label>
+                                <select id="partNewShift" class="p-2 rounded-lg text-xs bg-orange-50 text-orange-700 ring-1 ring-orange-200 font-bold">
+                                    <option>A</option><option>P</option><option>N</option><option>O</option>
+                                    <option>D</option><option>AL</option><option>11-7</option><option>1-9</option>
+                                </select>
+                            </div>
                         </div>
                         <input type="date" id="partDate" required class="w-full p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
                     </div>
@@ -121,8 +145,8 @@
             <div class="flex justify-between items-center px-2">
                 <h2 class="text-xl font-black">批核清單</h2>
                 <div class="flex gap-2">
-                    <button onclick="exportToExcel()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200"><i data-lucide="download" class="w-5 h-5 text-slate-600"></i></button>
-                    <button onclick="openScanModal('import')" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2">
+                    <button onclick="exportToExcel()" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 active:bg-slate-100 transition-colors"><i data-lucide="download" class="w-5 h-5 text-slate-600"></i></button>
+                    <button onclick="openScanModal('import')" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 active:scale-95 transition-all">
                         <i data-lucide="plus-circle" class="w-5 h-5"></i> 掃描申請
                     </button>
                 </div>
@@ -142,17 +166,17 @@
             </div>
             
             <div class="grid grid-cols-2 gap-3 mt-8 mb-4">
-                <button onclick="copyShareCode()" class="py-3 bg-slate-100 rounded-xl font-black text-sm">複製代碼</button>
-                <button onclick="whatsappShare()" class="py-3 bg-emerald-500 text-white rounded-xl font-black text-sm">WhatsApp</button>
+                <button onclick="copyShareCode()" class="py-3 bg-slate-100 rounded-xl font-black text-sm active:bg-slate-200 transition-colors">複製代碼</button>
+                <button onclick="whatsappShare()" class="py-3 bg-emerald-500 text-white rounded-xl font-black text-sm active:bg-emerald-600 transition-colors">WhatsApp</button>
             </div>
-            <button onclick="closeShareModal()" class="text-slate-400 font-bold text-sm">關閉</button>
+            <button onclick="closeShareModal()" class="text-slate-400 font-bold text-sm hover:text-slate-600 transition-colors">關閉</button>
         </div>
     </div>
 
     <div id="scanModal">
         <div class="bg-white p-4 rounded-3xl w-full max-w-md">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-black">掃描二維碼</h3>
+                <h3 class="font-black text-slate-800">掃描二維碼</h3>
                 <button onclick="closeScanModal()"><i data-lucide="x" class="text-slate-400"></i></button>
             </div>
             <div id="reader" class="w-full aspect-square bg-black rounded-2xl overflow-hidden mb-4"></div>
@@ -167,15 +191,15 @@
             <div id="statusIcon" class="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center"></div>
             <h3 id="statusTitle" class="text-2xl font-black mb-4"></h3>
             <div id="statusDetails" class="text-sm bg-slate-50 p-4 rounded-2xl mb-6 space-y-1 text-left font-medium"></div>
-            <button onclick="closeStatusModal()" class="w-full py-4 bg-slate-900 text-white rounded-xl font-black">確認</button>
+            <button onclick="closeStatusModal()" class="w-full py-4 bg-slate-900 text-white rounded-xl font-black active:scale-95 transition-all">確認</button>
         </div>
     </div>
 
     <div id="passwordModal">
         <div class="bg-white p-6 rounded-3xl w-full max-w-xs text-center">
-            <h3 class="font-black mb-4">管理員驗證</h3>
-            <input type="password" id="adminPassword" class="w-full p-4 bg-slate-100 rounded-xl mb-4 text-center text-xl tracking-widest" placeholder="密碼">
-            <button onclick="verifyPassword()" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black">進入批核</button>
+            <h3 class="font-black mb-4 text-slate-800">管理員驗證</h3>
+            <input type="password" id="adminPassword" class="w-full p-4 bg-slate-100 rounded-xl mb-4 text-center text-xl tracking-widest focus:ring-2 focus:ring-blue-500 outline-none" placeholder="密碼">
+            <button onclick="verifyPassword()" class="w-full py-4 bg-blue-600 text-white rounded-xl font-black active:scale-95 transition-all">進入批核</button>
         </div>
     </div>
 
@@ -185,7 +209,6 @@
         let allRequests = JSON.parse(localStorage.getItem('duty_v10_data')) || [];
         let html5QrCode = null;
 
-        // 【極致簡化映射】
         const shortMap = { id:'i', reqName:'n1', reqPos:'p1', reqOldShift:'o1', reqNewShift:'w1', reqDate:'d1', partName:'n2', partPos:'p2', partOldShift:'o2', partNewShift:'w2', partDate:'d2', status:'s' };
 
         const compress = (o) => {
@@ -212,13 +235,13 @@
                 id: Date.now().toString(36).toUpperCase(),
                 reqName: document.getElementById('reqName').value,
                 reqPos: document.getElementById('reqPos').value,
-                reqOldShift: document.getElementById('reqOldShift').value.split(': ')[1],
-                reqNewShift: document.getElementById('reqNewShift').value.split(': ')[1],
+                reqOldShift: document.getElementById('reqOldShift').value,
+                reqNewShift: document.getElementById('reqNewShift').value,
                 reqDate: document.getElementById('reqDate').value.slice(5),
                 partName: document.getElementById('partName').value,
                 partPos: document.getElementById('partPos').value,
-                partOldShift: document.getElementById('partOldShift').value.split(': ')[1],
-                partNewShift: document.getElementById('partNewShift').value.split(': ')[1],
+                partOldShift: document.getElementById('partOldShift').value,
+                partNewShift: document.getElementById('partNewShift').value,
                 partDate: document.getElementById('partDate').value.slice(5),
                 status: '待批'
             };
@@ -229,7 +252,6 @@
             const qrDiv = document.getElementById("qrcode");
             qrDiv.innerHTML = "";
             
-            // 【優化】使用更低容錯 Level L 以獲得更稀疏、更容易被模糊鏡頭辨識的點陣
             new QRCode(qrDiv, { 
                 text: code, 
                 width: 220, 
@@ -246,7 +268,6 @@
             window.currentScanMode = mode;
             document.getElementById('scanModal').style.display = 'flex';
             
-            // 【掃描強化】指定掃描區域與格式
             html5QrCode = new Html5Qrcode("reader");
             const config = { 
                 fps: 20, 
@@ -259,7 +280,10 @@
                     document.getElementById('scanModal').style.display = 'none';
                     handleResult(text);
                 });
-            }).catch(err => alert("相機啟動失敗"));
+            }).catch(err => {
+                console.error(err);
+                alert("相機啟動失敗，請確認權限設定");
+            });
         };
 
         function handleResult(text) {
@@ -296,6 +320,7 @@
                     <div class="flex justify-between"><span>申請人:</span><b>${found.reqName}</b></div>
                     <div class="flex justify-between"><span>對調人:</span><b>${found.partName}</b></div>
                     <div class="flex justify-between"><span>日期:</span><b>${found.reqDate}</b></div>
+                    <div class="flex justify-between"><span>變動:</span><b>${found.reqOldShift}➔${found.reqNewShift}</b></div>
                 `;
             }
             lucide.createIcons();
@@ -307,17 +332,17 @@
         window.render = () => {
             const container = document.getElementById('adminDataTable');
             container.innerHTML = allRequests.map(r => `
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center transition-all">
                     <div class="space-y-1">
                         <div class="font-black text-slate-800">${r.reqName} ↔ ${r.partName}</div>
-                        <div class="text-xs text-slate-400 font-bold">${r.reqDate} / ${r.partDate}</div>
-                        <div class="text-[10px] inline-block px-2 py-0.5 rounded-full ${r.status==='已批'?'bg-emerald-100 text-emerald-600':'bg-blue-100 text-blue-600'}">${r.status}</div>
+                        <div class="text-xs text-slate-400 font-bold">${r.reqDate} (${r.reqOldShift}➔${r.reqNewShift})</div>
+                        <div class="text-[10px] inline-block px-2 py-0.5 rounded-full ${r.status==='已批'?'bg-emerald-100 text-emerald-600':(r.status==='拒絕'?'bg-red-100 text-red-600':'bg-blue-100 text-blue-600')}">${r.status}</div>
                     </div>
                     <div class="flex gap-2">
                         ${r.status === '待批' ? `
-                            <button onclick="act('${r.id}','已批')" class="bg-emerald-500 text-white p-3 rounded-xl"><i data-lucide="check" class="w-4 h-4"></i></button>
-                            <button onclick="act('${r.id}','拒絕')" class="bg-red-500 text-white p-3 rounded-xl"><i data-lucide="x" class="w-4 h-4"></i></button>
-                        ` : `<button onclick="del('${r.id}')" class="text-slate-300 p-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>`}
+                            <button onclick="act('${r.id}','已批')" class="bg-emerald-500 text-white p-3 rounded-xl active:bg-emerald-600"><i data-lucide="check" class="w-4 h-4"></i></button>
+                            <button onclick="act('${r.id}','拒絕')" class="bg-red-500 text-white p-3 rounded-xl active:bg-red-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        ` : `<button onclick="del('${r.id}')" class="text-slate-300 p-2 hover:text-red-500"><i data-lucide="trash-2" class="w-5 h-5"></i></button>`}
                     </div>
                 </div>
             `).join('');
@@ -325,7 +350,7 @@
         };
 
         window.act = (id, s) => { allRequests = allRequests.map(r => r.id === id ? {...r, status: s} : r); save(); };
-        window.del = (id) => { if(confirm("刪除？")) { allRequests = allRequests.filter(r => r.id !== id); save(); } };
+        window.del = (id) => { if(confirm("確定刪除此記錄？")) { allRequests = allRequests.filter(r => r.id !== id); save(); } };
         window.switchTab = (t) => {
             document.getElementById('sectionApply').classList.toggle('hidden', t !== 'apply');
             document.getElementById('sectionAdmin').classList.toggle('hidden', t === 'apply');
@@ -347,13 +372,21 @@
         window.closeScanModal = () => { if (html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanModal').style.display='none'; }); else document.getElementById('scanModal').style.display='none'; };
         window.closeShareModal = () => document.getElementById('shareModal').style.display = 'none';
         window.closeStatusModal = () => document.getElementById('statusModal').style.display = 'none';
-        window.copyShareCode = () => { navigator.clipboard.writeText(window.currentShareCode); alert("已複製代碼"); };
+        window.copyShareCode = () => { 
+            const el = document.createElement('textarea');
+            el.value = window.currentShareCode;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert("已複製代碼"); 
+        };
         window.whatsappShare = () => { window.open(`https://wa.me/?text=${encodeURIComponent('調更代碼：' + window.currentShareCode)}`); };
         window.exportToExcel = () => { 
             const ws = XLSX.utils.json_to_sheet(allRequests); 
             const wb = XLSX.utils.book_new(); 
             XLSX.utils.book_append_sheet(wb, ws, "Records"); 
-            XLSX.writeFile(wb, `DutySwap.xlsx`); 
+            XLSX.writeFile(wb, `DutySwap_Export.xlsx`); 
         };
 
         document.addEventListener('DOMContentLoaded', () => { render(); updateBadge(); });
