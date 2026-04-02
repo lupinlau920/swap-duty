@@ -19,18 +19,53 @@
             backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;
         }
 
-        .date-field-group { position: relative; cursor: pointer; width: 100%; }
-        .real-date-picker { position: absolute; bottom: 0; left: 50%; width: 0; height: 0; opacity: 0; pointer-events: none; }
-
-        .fake-input {
-            width: 100%; height: 3.5rem; background: white; border: 1px solid #e2e8f0; border-radius: 0.75rem;
-            display: flex; align-items: center; padding: 0 1rem; font-size: 0.875rem; color: #64748b; transition: all 0.2s;
+        /* 穩定版日期輸入框樣式 */
+        .native-date-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0 1rem;
+            height: 3.5rem;
+            transition: all 0.2s;
         }
         
-        .date-field-group:active .fake-input { background-color: #f1f5f9; border-color: #3b82f6; }
+        .native-date-wrapper:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .native-date-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            color: #1e293b;
+            font-weight: 600;
+            outline: none;
+            width: 100%;
+            height: 100%;
+            -webkit-appearance: none;
+            min-height: 1.5rem;
+        }
+
+        /* 移除部分瀏覽器預設的圖示以保持美觀 */
+        .native-date-input::-webkit-calendar-picker-indicator {
+            background: transparent;
+            bottom: 0;
+            color: transparent;
+            cursor: pointer;
+            height: auto;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: auto;
+        }
+
         #qrcode canvas, #qrcode img { margin: 0 auto; border: 8px solid white; border-radius: 12px; }
-        
-        /* 動畫 */
         .status-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
@@ -57,14 +92,12 @@
     </nav>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        <!-- 提交申請頁面 -->
         <section id="sectionApply" class="animate-in fade-in duration-500">
             <div class="max-w-2xl mx-auto space-y-6">
-                <!-- 快速工具欄 -->
                 <div class="bg-blue-600 rounded-2xl p-4 flex justify-between items-center text-white shadow-lg">
-                    <div class="text-sm font-bold">已有申請 QR？</div>
+                    <div class="text-sm font-bold text-blue-50">已有申請 QR？</div>
                     <button onclick="openScanModal('status')" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2">
-                        <i data-lucide="search" class="w-4 h-4"></i> 查看批核結果
+                        <i data-lucide="search" class="w-4 h-4"></i> 查看結果
                     </button>
                 </div>
 
@@ -74,12 +107,12 @@
                         <h2 class="text-2xl font-black text-gray-800">建立新調更申請</h2>
                     </div>
                     <form id="swapForm" class="space-y-8">
-                        <!-- 申請人與對調同事區塊 (省略部分與舊版相同之結構，維持完整代碼功能) -->
+                        <!-- 申請人區塊 -->
                         <div class="p-6 bg-blue-50/50 rounded-2xl space-y-5 border border-blue-100 relative">
                             <div class="absolute -top-3 left-6 bg-blue-600 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest">本人 / 申請人</div>
                             <div class="grid grid-cols-2 gap-4">
                                 <input type="text" id="reqName" required class="w-full px-5 py-4 border border-blue-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-blue-400 bg-white" placeholder="您的姓名">
-                                <select id="reqPos" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
+                                <select id="reqPos" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-700">
                                     <option value="" disabled selected>職位</option>
                                     <option value="APN">APN</option><option value="RN">RN</option><option value="EA">EA</option><option value="PCA">PCA</option>
                                 </select>
@@ -87,28 +120,33 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-blue-400 ml-1">原本更期</label>
-                                    <select id="reqOldShift" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-600 outline-none">
+                                    <select id="reqOldShift" required class="w-full px-4 py-3 border border-blue-200 rounded-xl text-sm bg-white font-bold text-gray-600">
                                         <option value="A">A</option><option value="P">P</option><option value="N">N</option><option value="O">O</option><option value="D">D</option><option value="VL">VL</option>
                                     </select>
                                 </div>
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-blue-600 ml-1">調換後更期</label>
-                                    <select id="reqNewShift" required class="w-full px-4 py-3 border border-blue-400 rounded-xl text-sm bg-white font-bold text-blue-600 outline-none">
+                                    <select id="reqNewShift" required class="w-full px-4 py-3 border border-blue-400 rounded-xl text-sm bg-white font-bold text-blue-600">
                                         <option value="A">A</option><option value="P">P</option><option value="N">N</option><option value="O">O</option><option value="D">D</option><option value="VL">VL</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="date-field-group" onclick="triggerDatePicker('picker_reqDate')">
-                                <div class="fake-input" id="disp_reqDate">選擇調更日期</div>
-                                <input type="date" id="picker_reqDate" class="real-date-picker" onchange="updateDisplay(this, 'disp_reqDate')">
+                            <!-- 穩定版日期選擇 -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-blue-600 ml-1">調更日期</label>
+                                <div class="native-date-wrapper" onclick="this.querySelector('input').showPicker()">
+                                    <i data-lucide="calendar" class="w-5 h-5 mr-3 text-blue-500"></i>
+                                    <input type="date" id="reqDate" required class="native-date-input">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="p-6 bg-orange-50/50 rounded-2xl space-y-5 border border-orange-100 relative mt-6">
+                        <!-- 對調同事區塊 -->
+                        <div class="p-6 bg-orange-50/50 rounded-2xl space-y-5 border border-orange-100 relative">
                             <div class="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest">對調同事</div>
                             <div class="grid grid-cols-2 gap-4">
                                 <input type="text" id="partName" required class="w-full px-5 py-4 border border-orange-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-orange-400 bg-white" placeholder="對象姓名">
-                                <select id="partPos" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-700 outline-none">
+                                <select id="partPos" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-700">
                                     <option value="" disabled selected>職位</option>
                                     <option value="APN">APN</option><option value="RN">RN</option><option value="EA">EA</option><option value="PCA">PCA</option>
                                 </select>
@@ -116,20 +154,24 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-orange-400 ml-1">原本更期</label>
-                                    <select id="partOldShift" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-600 outline-none">
+                                    <select id="partOldShift" required class="w-full px-4 py-3 border border-orange-200 rounded-xl text-sm bg-white font-bold text-gray-600">
                                         <option value="A">A</option><option value="P">P</option><option value="N">N</option><option value="O">O</option><option value="D">D</option><option value="VL">VL</option>
                                     </select>
                                 </div>
                                 <div class="space-y-1">
                                     <label class="text-[10px] font-bold text-orange-600 ml-1">調換後更期</label>
-                                    <select id="partNewShift" required class="w-full px-4 py-3 border border-orange-400 rounded-xl text-sm bg-white font-bold text-orange-600 outline-none">
+                                    <select id="partNewShift" required class="w-full px-4 py-3 border border-orange-400 rounded-xl text-sm bg-white font-bold text-orange-600">
                                         <option value="A">A</option><option value="P">P</option><option value="N">N</option><option value="O">O</option><option value="D">D</option><option value="VL">VL</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="date-field-group" onclick="triggerDatePicker('picker_partDate')">
-                                <div class="fake-input" id="disp_partDate">選擇對象調更日期</div>
-                                <input type="date" id="picker_partDate" class="real-date-picker" onchange="updateDisplay(this, 'disp_partDate')">
+                            <!-- 穩定版日期選擇 -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-orange-600 ml-1">對調日期</label>
+                                <div class="native-date-wrapper" onclick="this.querySelector('input').showPicker()">
+                                    <i data-lucide="calendar" class="w-5 h-5 mr-3 text-orange-500"></i>
+                                    <input type="date" id="partDate" required class="native-date-input">
+                                </div>
                             </div>
                         </div>
 
@@ -141,7 +183,7 @@
             </div>
         </section>
 
-        <!-- 主管批核頁面 -->
+        <!-- 管理與彈窗區塊保持不變 -->
         <section id="sectionAdmin" class="hidden animate-in slide-in-from-bottom duration-500">
             <div class="bg-white rounded-3xl shadow-sm border overflow-hidden">
                 <div class="p-6 border-b flex justify-between items-center bg-white flex-wrap gap-4">
@@ -149,9 +191,7 @@
                         <i data-lucide="shield-check" class="text-blue-600"></i> 批核中心
                     </h2>
                     <div class="flex gap-2 w-full md:w-auto">
-                        <button onclick="exportToExcel()" class="flex-1 md:flex-none bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg">
-                            導出 Excel
-                        </button>
+                        <button onclick="exportToExcel()" class="flex-1 md:flex-none bg-emerald-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg">導出 Excel</button>
                         <button onclick="openScanModal('import')" class="flex-1 md:flex-none bg-orange-600 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-1">
                             <i data-lucide="scan-line" class="w-4 h-4"></i> 掃描 / 匯入
                         </button>
@@ -169,29 +209,22 @@
         </section>
     </main>
 
-    <!-- 掃描 Modal (支援相機與檔案) -->
+    <!-- Modals (Scan, Status, Share, Password, Alert) -->
     <div id="scanModal">
         <div class="bg-white p-6 rounded-3xl w-full max-w-md shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="scanModalTitle" class="text-xl font-black">掃描 QR Code</h3>
                 <button onclick="closeScanModal()" class="text-gray-400"><i data-lucide="x"></i></button>
             </div>
-            
             <div id="reader" class="w-full overflow-hidden rounded-2xl bg-black aspect-square mb-4"></div>
-            
-            <div class="space-y-3">
-                <!-- 檔案上傳優化 -->
-                <label class="w-full py-4 bg-blue-50 text-blue-600 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-blue-200">
-                    <i data-lucide="image" class="w-5 h-5"></i>
-                    從相簿選取照片
-                    <input type="file" id="qr-input-file" accept="image/*" class="hidden" onchange="processFileScan(this)">
-                </label>
-                <button onclick="closeScanModal()" class="w-full py-3 text-gray-400 font-bold">返回</button>
-            </div>
+            <label class="w-full py-4 bg-blue-50 text-blue-600 rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-blue-200 mb-2">
+                <i data-lucide="image" class="w-5 h-5"></i> 從相簿選取照片
+                <input type="file" id="qr-input-file" accept="image/*" class="hidden" onchange="processFileScan(this)">
+            </label>
+            <button onclick="closeScanModal()" class="w-full py-3 text-gray-400 font-bold">返回</button>
         </div>
     </div>
 
-    <!-- 狀態顯示 Modal -->
     <div id="statusModal">
         <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl text-center">
             <div id="statusIcon" class="mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center"></div>
@@ -201,12 +234,10 @@
         </div>
     </div>
 
-    <!-- 其它 Modal (維持原樣) -->
     <div id="shareModal">
         <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl text-center">
             <div class="mx-auto mb-4 bg-blue-100 text-blue-600 w-12 h-12 rounded-full flex items-center justify-center"><i data-lucide="qr-code"></i></div>
             <h3 class="text-2xl font-black mb-1">申請 QR Code</h3>
-            <p class="text-gray-400 text-xs mb-6">請將此碼展示給主管，或截圖保存</p>
             <div id="qrcode" class="mb-6"></div>
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="copyShareCode()" class="py-4 bg-gray-100 rounded-xl font-black text-sm">複製代碼</button>
@@ -217,7 +248,7 @@
     </div>
 
     <div id="passwordModal">
-        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl">
+        <div class="bg-white p-8 rounded-3xl w-full max-sm shadow-2xl">
             <h3 class="text-xl font-black mb-4">管理員驗證</h3>
             <input type="password" id="adminPassword" class="w-full border p-4 rounded-xl mb-4" placeholder="密碼 (1234)">
             <button onclick="verifyPassword()" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold">進入</button>
@@ -226,7 +257,7 @@
     </div>
 
     <div id="alertModal">
-        <div class="bg-white p-8 rounded-3xl w-full max-w-sm shadow-2xl text-center">
+        <div class="bg-white p-8 rounded-3xl w-full max-sm shadow-2xl text-center">
             <h3 id="alertTitle" class="text-xl font-black mb-2"></h3>
             <p id="alertDesc" class="text-gray-500 mb-6 text-sm"></p>
             <button onclick="closeAlert()" class="w-full py-4 bg-gray-900 text-white rounded-xl font-black">確定</button>
@@ -238,36 +269,31 @@
         let allRequests = JSON.parse(localStorage.getItem('local_duty_data_v4')) || [];
         let currentShareCode = "";
         let html5QrCode = null;
-        let currentScanMode = 'import'; // 'import' 或 'status'
+        let currentScanMode = 'import';
 
-        // 日期控制
-        window.triggerDatePicker = (p) => { const el = document.getElementById(p); if(el.showPicker) el.showPicker(); else el.click(); };
-        window.updateDisplay = (p, d) => {
-            const val = p.value; if(!val) return;
-            const [y, m, d_val] = val.split('-');
-            const el = document.getElementById(d);
-            el.innerText = `${d_val}/${m}/${y}`; el.style.color = "#1e293b"; el.style.fontWeight = "bold";
+        // 格式化日期顯示 (YYYY-MM-DD -> DD/MM/YYYY)
+        const formatDate = (val) => {
+            if(!val) return "";
+            const [y, m, d] = val.split('-');
+            return `${d}/${m}/${y}`;
         };
 
         // 表單提交
         document.getElementById('swapForm').onsubmit = (e) => {
             e.preventDefault();
-            const d1 = document.getElementById('disp_reqDate').innerText;
-            const d2 = document.getElementById('disp_partDate').innerText;
-            if (d1.includes('選擇') || d2.includes('選擇')) { showAlert("日期未選", "請選擇日期。"); return; }
-
+            
             const data = {
-                id: "REQ-" + Date.now(), // 固定 ID 用於回查
+                id: "REQ-" + Date.now(), 
                 reqName: document.getElementById('reqName').value,
                 reqPos: document.getElementById('reqPos').value,
                 reqOldShift: document.getElementById('reqOldShift').value,
                 reqNewShift: document.getElementById('reqNewShift').value,
-                reqDate: d1,
+                reqDate: formatDate(document.getElementById('reqDate').value),
                 partName: document.getElementById('partName').value,
                 partPos: document.getElementById('partPos').value,
                 partOldShift: document.getElementById('partOldShift').value,
                 partNewShift: document.getElementById('partNewShift').value,
-                partDate: d2,
+                partDate: formatDate(document.getElementById('partDate').value),
                 status: '待批核',
                 timestamp: new Date().toLocaleString()
             };
@@ -278,25 +304,19 @@
             document.getElementById('shareModal').style.display = 'flex';
         };
 
-        // 掃描核心邏輯
+        // 掃描與邏輯
         window.openScanModal = (mode) => {
             currentScanMode = mode;
-            document.getElementById('scanModalTitle').innerText = mode === 'status' ? '查看申請狀態' : '掃描申請 QR Code';
+            document.getElementById('scanModalTitle').innerText = mode === 'status' ? '查看狀態' : '掃描申請';
             document.getElementById('scanModal').style.display = 'flex';
-            
             html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => {
-                handleDecodedText(text);
-            }).catch(() => { /* 忽略啟動錯誤 */ });
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, handleDecodedText).catch(() => { });
         };
 
         window.processFileScan = (input) => {
             if (!input.files || input.files.length === 0) return;
-            const file = input.files[0];
             const scanner = new Html5Qrcode("reader");
-            scanner.scanFile(file, true)
-                .then(text => handleDecodedText(text))
-                .catch(err => showAlert("讀取失敗", "照片中找不到有效的 QR Code。"));
+            scanner.scanFile(input.files[0], true).then(handleDecodedText).catch(() => showAlert("讀取失敗", "找不到 QR Code。"));
         };
 
         function handleDecodedText(text) {
@@ -307,13 +327,10 @@
                     if (!allRequests.find(r => r.id === data.id)) {
                         allRequests.unshift(data);
                         saveAndRender();
-                        showAlert("匯入成功", "主管已成功接收申請。");
-                    } else { showAlert("提示", "此申請已在清單中。"); }
-                } else {
-                    // 查看狀態模式
-                    checkStatus(data.id, data);
-                }
-            } catch (e) { showAlert("錯誤", "無效的二維碼格式。"); }
+                        showAlert("匯入成功", "主管已收到申請。");
+                    } else showAlert("提示", "此申請已存在。");
+                } else checkStatus(data.id, data);
+            } catch (e) { showAlert("錯誤", "無效格式。"); }
         }
 
         function checkStatus(id, originalData) {
@@ -327,54 +344,33 @@
                 iconBox.className = "mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center bg-gray-100 text-gray-400";
                 iconBox.innerHTML = '<i data-lucide="clock" class="w-10 h-10 status-pulse"></i>';
                 title.innerText = "主管尚未匯入";
-                details.innerHTML = `<p><b>申請人:</b> ${originalData.reqName}</p><p>請先確保主管已掃描您的 QR Code。</p>`;
+                details.innerHTML = `<p><b>申請人:</b> ${originalData.reqName}</p><p class="text-xs text-gray-500 mt-2">主管尚未掃描此 QR，請提醒主管。</p>`;
             } else {
-                if (found.status === '待批核') {
-                    iconBox.className = "mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center bg-blue-100 text-blue-600";
-                    iconBox.innerHTML = '<i data-lucide="loader" class="w-10 h-10 animate-spin"></i>';
-                    title.innerText = "批核中...";
-                } else if (found.status === '已批准') {
-                    iconBox.className = "mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-600";
-                    iconBox.innerHTML = '<i data-lucide="check-circle" class="w-10 h-10"></i>';
-                    title.innerText = "申請已批准！";
-                } else {
-                    iconBox.className = "mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center bg-red-100 text-red-600";
-                    iconBox.innerHTML = '<i data-lucide="x-circle" class="w-10 h-10"></i>';
-                    title.innerText = "申請被拒絕";
-                }
-                details.innerHTML = `
-                    <p><b>流水號:</b> ${found.id}</p>
-                    <p><b>申請人:</b> ${found.reqName} (${found.reqOldShift}→${found.reqNewShift})</p>
-                    <p><b>對調人:</b> ${found.partName} (${found.partOldShift}→${found.partNewShift})</p>
-                    <p class="mt-2 text-[10px] text-gray-400">最後更新: ${found.timestamp}</p>
-                `;
+                const colors = { '待批核': 'blue', '已批准': 'emerald', '已拒絕': 'red' };
+                const icons = { '待批核': 'loader', '已批准': 'check-circle', '已拒絕': 'x-circle' };
+                const c = colors[found.status];
+                iconBox.className = `mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center bg-${c}-100 text-${c}-600`;
+                iconBox.innerHTML = `<i data-lucide="${icons[found.status]}" class="w-10 h-10 ${found.status === '待批核' ? 'animate-spin' : ''}"></i>`;
+                title.innerText = found.status === '待批核' ? "批核中..." : (found.status === '已批准' ? "申請已批准！" : "申請被拒絕");
+                details.innerHTML = `<p><b>流水號:</b> ${found.id}</p><p><b>申請人:</b> ${found.reqName}</p><p><b>對調人:</b> ${found.partName}</p>`;
             }
             lucide.createIcons();
             statusModal.style.display = 'flex';
         }
 
-        window.closeScanModal = () => {
-            if (html5QrCode) {
-                html5QrCode.stop().finally(() => {
-                    document.getElementById('scanModal').style.display = 'none';
-                    html5QrCode = null;
-                });
-            } else { document.getElementById('scanModal').style.display = 'none'; }
-        };
-
-        // 其它功能函數 (維持原樣)
+        window.closeScanModal = () => { if (html5QrCode) { html5QrCode.stop().finally(() => { document.getElementById('scanModal').style.display = 'none'; html5QrCode = null; }); } else document.getElementById('scanModal').style.display = 'none'; };
         window.saveAndRender = () => { localStorage.setItem('local_duty_data_v4', JSON.stringify(allRequests)); renderAdminTable(); updateBadge(); };
         window.renderAdminTable = () => {
             const tbody = document.getElementById('adminDataTable');
             tbody.innerHTML = allRequests.length ? allRequests.map(r => `
                 <tr class="hover:bg-blue-50/30 border-b">
                     <td class="px-6 py-4">
-                        <div class="font-black text-gray-800">${r.reqName} <span class="text-[10px] text-blue-500 font-bold">${r.reqPos}</span></div>
-                        <div class="text-[10px] text-gray-400">${r.reqDate} (${r.reqOldShift}→${r.reqNewShift})</div>
+                        <div class="font-black text-gray-800">${r.reqName} <span class="text-[10px] text-gray-400 font-normal">(${r.reqPos})</span></div>
+                        <div class="text-[10px] text-blue-600 font-bold mt-0.5">${r.reqDate} <span class="text-gray-400">(${r.reqOldShift}→${r.reqNewShift})</span></div>
                     </td>
                     <td class="px-6 py-4 text-right">
-                        <div class="font-black text-gray-800">${r.partName} <span class="text-[10px] text-orange-500 font-bold">${r.partPos}</span></div>
-                        <div class="text-[10px] text-gray-400">${r.partDate} (${r.partOldShift}→${r.partNewShift})</div>
+                        <div class="font-black text-gray-800">${r.partName} <span class="text-[10px] text-gray-400 font-normal">(${r.partPos})</span></div>
+                        <div class="text-[10px] text-orange-600 font-bold mt-0.5">${r.partDate} <span class="text-gray-400">(${r.partOldShift}→${r.partNewShift})</span></div>
                     </td>
                     <td class="px-6 py-4 text-center">
                         <span class="text-[10px] font-black ${r.status === '已批准' ? 'text-emerald-500' : (r.status === '已拒絕' ? 'text-red-500' : 'text-blue-500')}">${r.status}</span>
@@ -390,7 +386,15 @@
             lucide.createIcons();
         };
 
-        window.updateStatus = (id, s) => { allRequests = allRequests.map(r => r.id === id ? {...r, status: s, timestamp: new Date().toLocaleString()} : r); saveAndRender(); };
+        window.exportToExcel = () => {
+            if (!allRequests.length) return;
+            const ws = XLSX.utils.json_to_sheet(allRequests);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Records");
+            XLSX.writeFile(wb, `DutySwap_${new Date().getTime()}.xlsx`);
+        };
+
+        window.updateStatus = (id, s) => { allRequests = allRequests.map(r => r.id === id ? {...r, status: s} : r); saveAndRender(); };
         window.deleteRow = (id) => { if(confirm("確定刪除？")) { allRequests = allRequests.filter(r => r.id !== id); saveAndRender(); } };
         window.switchTab = (t) => {
             document.getElementById('sectionApply').classList.toggle('hidden', t !== 'apply');
@@ -406,8 +410,7 @@
         window.closeStatusModal = () => document.getElementById('statusModal').style.display = 'none';
         window.closeShareModal = () => document.getElementById('shareModal').style.display = 'none';
         window.closePasswordModal = () => document.getElementById('passwordModal').style.display = 'none';
-        
-        window.copyShareCode = () => { navigator.clipboard.writeText(currentShareCode); showAlert("已複製", "可手動傳送代碼。"); };
+        window.copyShareCode = () => { const el = document.createElement('textarea'); el.value = currentShareCode; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showAlert("已複製", "可傳送代碼。"); };
         window.whatsappShare = () => { window.open(`https://wa.me/?text=${encodeURIComponent(currentShareCode)}`, '_blank'); };
 
         document.addEventListener('DOMContentLoaded', () => { renderAdminTable(); updateBadge(); });
