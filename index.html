@@ -9,6 +9,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- 引入 jsQR 用於圖片識別 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
@@ -45,7 +47,7 @@
                 <div class="bg-blue-600 p-1.5 rounded-lg">
                     <i data-lucide="hospital" class="text-white w-5 h-5"></i>
                 </div>
-                <span class="text-lg font-black text-gray-800">調更系統 v3.5</span>
+                <span class="text-lg font-black text-gray-800">調更系統 v3.6</span>
             </div>
             <div class="flex gap-1 h-full">
                 <button onclick="switchTab('apply')" id="tabApply" class="px-3 flex items-center tab-active text-sm">申請</button>
@@ -57,6 +59,7 @@
     </nav>
 
     <main class="max-w-7xl mx-auto p-4">
+        <!-- 申請頁面內容與先前版本相同，保持功能穩定 -->
         <section id="sectionApply" class="space-y-4">
             <div onclick="openScanModal('status')" class="bg-blue-600 p-5 rounded-2xl text-white flex justify-between items-center shadow-lg active:scale-95 transition-all cursor-pointer">
                 <div class="flex items-center gap-4">
@@ -72,7 +75,6 @@
             <div class="bg-white rounded-3xl shadow-md p-6 border border-slate-200">
                 <h2 class="text-xl font-black mb-6 text-slate-800">填寫調更資料</h2>
                 <form id="swapForm" class="space-y-6">
-                    <!-- 申請人部分 -->
                     <div class="bg-slate-50 p-4 rounded-2xl space-y-3">
                         <div class="flex items-center gap-2 mb-2 text-blue-600 font-black text-sm border-b pb-2 border-blue-100">
                             <i data-lucide="user" class="w-4 h-4"></i> 申請人
@@ -103,7 +105,6 @@
                         <input type="date" id="reqDate" required class="w-full p-3 rounded-xl border-none ring-1 ring-slate-200 text-sm">
                     </div>
 
-                    <!-- 對調同事部分 -->
                     <div class="bg-slate-50 p-4 rounded-2xl space-y-3">
                         <div class="flex items-center gap-2 mb-2 text-orange-600 font-black text-sm border-b pb-2 border-orange-100">
                             <i data-lucide="users" class="w-4 h-4"></i> 對調同事
@@ -164,11 +165,7 @@
         <div class="bg-white p-6 rounded-3xl w-full max-w-sm text-center">
             <h3 class="text-xl font-black mb-1">您的申請碼</h3>
             <p class="text-xs text-slate-400 mb-6 font-bold">請確保螢幕亮度足夠，讓主管掃描</p>
-            
-            <div id="qrcode-container">
-                <div id="qrcode"></div>
-            </div>
-            
+            <div id="qrcode-container"><div id="qrcode"></div></div>
             <div class="grid grid-cols-2 gap-3 mt-8 mb-4">
                 <button onclick="copyShareCode()" class="py-3 bg-slate-100 rounded-xl font-black text-sm active:bg-slate-200 transition-colors">複製代碼</button>
                 <button onclick="whatsappShare()" class="py-3 bg-emerald-500 text-white rounded-xl font-black text-sm active:bg-emerald-600 transition-colors">WhatsApp</button>
@@ -177,32 +174,41 @@
         </div>
     </div>
 
-    <!-- 掃描與手動匯入 Modal -->
+    <!-- 增強型掃描與匯入 Modal -->
     <div id="scanModal">
-        <div class="bg-white p-4 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div class="bg-white p-5 rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="font-black text-slate-800">匯入調更申請</h3>
                 <button onclick="closeScanModal()"><i data-lucide="x" class="text-slate-400"></i></button>
             </div>
             
             <!-- 相機掃描區 -->
-            <div id="reader" class="w-full aspect-square bg-black rounded-2xl overflow-hidden mb-4"></div>
+            <div id="reader" class="w-full aspect-square bg-black rounded-2xl overflow-hidden mb-4 shadow-inner"></div>
             
-            <div class="relative flex items-center py-4">
-                <div class="flex-grow border-t border-slate-200"></div>
-                <span class="flex-shrink mx-4 text-slate-400 text-xs font-bold">或手動貼上代碼</span>
-                <div class="flex-grow border-t border-slate-200"></div>
+            <!-- 圖片上載功能 -->
+            <div class="grid grid-cols-1 gap-2 mb-4">
+                <label class="w-full py-4 bg-blue-50 text-blue-600 border-2 border-dashed border-blue-200 rounded-2xl flex flex-col items-center justify-center cursor-pointer active:bg-blue-100 transition-colors">
+                    <input type="file" id="qrImageInput" accept="image/*" class="hidden" onchange="handleImageUpload(this)">
+                    <div class="flex items-center gap-2 font-black text-sm">
+                        <i data-lucide="image" class="w-5 h-5"></i>
+                        從相簿選擇 QR Code 截圖
+                    </div>
+                    <span class="text-[10px] font-bold opacity-60">支援 JPG, PNG 圖片匯入</span>
+                </label>
+            </div>
+
+            <div class="relative flex items-center py-2">
+                <div class="flex-grow border-t border-slate-100"></div>
+                <span class="flex-shrink mx-4 text-slate-400 text-[10px] font-black tracking-widest">或</span>
+                <div class="flex-grow border-t border-slate-100"></div>
             </div>
 
             <!-- 手動輸入區 -->
-            <div class="space-y-3">
-                <textarea id="manualCodeInput" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono h-20 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="在此貼上員工複製給您的代碼..."></textarea>
+            <div class="mt-4 space-y-3">
+                <textarea id="manualCodeInput" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-mono h-16 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="在此貼上代碼..."></textarea>
                 <button onclick="handleManualImport()" class="w-full py-3 bg-slate-900 text-white rounded-xl font-black text-sm active:scale-95 transition-all">
-                    手動匯入
+                    手動代碼匯入
                 </button>
-            </div>
-            <div class="text-center text-[10px] text-slate-400 font-bold mt-4">
-                掃描建議：保持 10-15 公分距離，避免強光反光
             </div>
         </div>
     </div>
@@ -243,7 +249,6 @@
 
         const decompress = (str) => {
             try {
-                // 修復 Base64 可能缺少的填補符號
                 let base64 = str.trim();
                 while (base64.length % 4 !== 0) base64 += '=';
                 const raw = decodeURIComponent(escape(atob(base64)));
@@ -258,6 +263,43 @@
                 console.error("Decompression error:", e);
                 return null; 
             }
+        };
+
+        // 圖片上載辨識邏輯
+        window.handleImageUpload = (input) => {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        if (html5QrCode && html5QrCode.isScanning) {
+                            html5QrCode.stop().then(() => {
+                                document.getElementById('scanModal').style.display = 'none';
+                                handleResult(code.data);
+                            });
+                        } else {
+                            document.getElementById('scanModal').style.display = 'none';
+                            handleResult(code.data);
+                        }
+                    } else {
+                        alert("辨識失敗：圖片中找不到有效的 QR Code，請確保截圖清晰。");
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         };
 
         document.getElementById('swapForm').addEventListener('submit', function(e) {
@@ -289,7 +331,7 @@
                 height: 220,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L 
+                correctLevel : QRCode.CorrectLevel.M 
             });
             
             document.getElementById('shareModal').style.display = 'flex';
@@ -298,6 +340,7 @@
         window.openScanModal = (mode) => {
             window.currentScanMode = mode;
             document.getElementById('manualCodeInput').value = "";
+            document.getElementById('qrImageInput').value = "";
             document.getElementById('scanModal').style.display = 'flex';
             
             html5QrCode = new Html5Qrcode("reader");
@@ -316,15 +359,13 @@
                         handleResult(text);
                     });
                 },
-                (errorMessage) => {
-                    // 忽略靜態掃描失敗的錯誤訊息
-                }
+                (errorMessage) => {}
             ).catch(err => {
                 document.getElementById('reader').innerHTML = `
                     <div class="h-full flex flex-col items-center justify-center p-6 text-center bg-slate-900 text-white">
                         <i data-lucide="camera-off" class="w-12 h-12 mb-2 opacity-50"></i>
-                        <p class="text-xs font-bold">無法啟動相機</p>
-                        <p class="text-[10px] opacity-60 mt-1">請檢查瀏覽器權限或使用下方手動輸入</p>
+                        <p class="text-xs font-bold">相機權限受限</p>
+                        <p class="text-[10px] opacity-60 mt-1">請嘗試「上載圖片」或「手動代碼」匯入</p>
                     </div>
                 `;
                 lucide.createIcons();
@@ -349,7 +390,7 @@
         function handleResult(text) {
             const data = decompress(text);
             if (!data || !data.id) {
-                alert("無效的申請格式，請重新確認代碼或 QR Code 是否正確。");
+                alert("無效代碼：無法解碼資料。請確保來源 QR Code 為本系統生成。");
                 return;
             }
 
@@ -360,7 +401,7 @@
                     save();
                     alert(`成功匯入 ${data.reqName} 的申請`);
                 } else {
-                    alert("此申請已在清單中。");
+                    alert("此申請已存在於清單中。");
                 }
             } else {
                 showStatus(data);
@@ -375,8 +416,8 @@
             if (!found) {
                 icon.className = "mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center bg-slate-100 text-slate-400";
                 icon.innerHTML = '<i data-lucide="help-circle" class="w-8 h-8"></i>';
-                document.getElementById('statusTitle').innerText = "查無此案";
-                details.innerHTML = "<li>主管端尚未匯入此申請記錄。</li><li>請先讓主管掃描您的 QR Code 進行匯入。</li>";
+                document.getElementById('statusTitle').innerText = "查無記錄";
+                details.innerHTML = "<li>主管端尚未匯入此申請。</li><li>請確保主管已成功掃描您的 QR Code 並進入批核清單。</li>";
             } else {
                 const colors = { '已批': 'bg-emerald-100 text-emerald-600', '拒絕': 'bg-red-100 text-red-600', '待批': 'bg-blue-100 text-blue-600' };
                 icon.className = `mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center ${colors[found.status] || 'bg-slate-100'}`;
@@ -398,20 +439,14 @@
         window.render = () => {
             const container = document.getElementById('adminDataTable');
             const empty = document.getElementById('emptyState');
-            
-            if (allRequests.length === 0) {
-                container.innerHTML = "";
-                empty.classList.remove('hidden');
-                return;
-            }
-            
+            if (allRequests.length === 0) { container.innerHTML = ""; empty.classList.remove('hidden'); return; }
             empty.classList.add('hidden');
             container.innerHTML = allRequests.map(r => `
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center transition-all">
                     <div class="space-y-1">
                         <div class="font-black text-slate-800">${r.reqName} ↔ ${r.partName}</div>
-                        <div class="text-xs text-slate-400 font-bold">${r.reqDate} (${r.reqOldShift}➔${r.reqNewShift})</div>
-                        <div class="text-[10px] inline-block px-2 py-0.5 rounded-full ${r.status==='已批'?'bg-emerald-100 text-emerald-600':(r.status==='拒絕'?'bg-red-100 text-red-600':'bg-blue-100 text-blue-600')}">${r.status}</div>
+                        <div class="text-[10px] text-slate-400 font-bold">${r.reqDate} (${r.reqOldShift}➔${r.reqNewShift})</div>
+                        <div class="text-[10px] inline-block px-2 py-0.5 rounded-full mt-1 ${r.status==='已批'?'bg-emerald-100 text-emerald-600':(r.status==='拒絕'?'bg-red-100 text-red-600':'bg-blue-100 text-blue-600')} font-black">${r.status}</div>
                     </div>
                     <div class="flex gap-2">
                         ${r.status === '待批' ? `
@@ -460,11 +495,8 @@
         window.copyShareCode = () => { 
             const el = document.createElement('textarea');
             el.value = window.currentShareCode;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert("已複製代碼，請傳送給主管貼上匯入。"); 
+            document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            alert("已複製代碼。"); 
         };
         window.whatsappShare = () => { window.open(`https://wa.me/?text=${encodeURIComponent('我的調更申請代碼：\n' + window.currentShareCode)}`); };
         window.exportToExcel = () => { 
